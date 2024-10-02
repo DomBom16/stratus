@@ -1,0 +1,194 @@
+// utils/processFile.js
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
+const { v4: uuidv4 } = require("uuid");
+const cheerio = require("cheerio");
+const fetch = require("node-fetch");
+const { openaiClient } = require("../config/openaiClient");
+const Conversation = require("../models/Conversation");
+const { extractTextFromFile } = require("./extractTextFromFile");
+
+async function processFile(textContent, model) {
+  // Generate title for the content
+  const titleResponse = await openaiClient.chat.completions.create({
+    model: model,
+    max_tokens: 64,
+    temperature: 0.5,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Respond to the user's input with a title that concisely describes the content in 3-4 words. Aim for a descriptive and specific title that captures the essence of the content. Do not prefix any text (e.g., 'title:') to your response.",
+      },
+      { role: "user", content: textContent },
+    ],
+  });
+  const title = titleResponse.choices[0].message.content;
+
+  // Generate brief (10%) and detailed (50%) summaries
+  const [unfocusedResponse, focusedResponse] = await Promise.all([
+    openaiClient.chat.completions.create({
+      model: model,
+      max_tokens: 1024,
+      temperature: 0.7,
+      messages: [
+        {
+          role: "system",
+          content: `${textContent}\n\nUsing the above content, write a brief summary of the content (around 10% of the text length). It should be plain sentences, no bullets or over-the-top markdown formatting.`,
+        },
+        { role: "user", content: textContent },
+      ],
+    }),
+    openaiClient.chat.completions.create({
+      model: model,
+      max_tokens: 4096,
+      temperature: 0.7,
+      messages: [
+        {
+          role: "system",
+          content: `${textContent}\n\nUsing the above content, write a detailed summary of the content (around half of the text length). It should be plain sentences, no bullets or over-the-top markdown formatting. If the content is code, include the full code source.`,
+        },
+      ],
+    }),
+  ]);
+
+  const unfocusedSummary = unfocusedResponse.choices[0].message.content;
+  const focusedSummary = focusedResponse.choices[0].message.content;
+
+  return { title, unfocusedSummary, focusedSummary };
+}
+
+async function processUploadedFile(file, conversationId) {
+  try {
+    const textContent = await extractTextFromFile(file);
+
+    if (!textContent || textContent.trim().length === 0) {
+      throw new Error("Failed to extract text from the file");
+    }
+
+    const { title, unfocusedSummary, focusedSummary } = await processFile(
+      textContent,
+      process.env.MODEL,
+    );
+
+    const fileId = uuidv4();
+    const newFile = {
+      id: fileId,
+      original_name: file.originalname,
+      name: title,
+      type: "file",
+      date_uploaded: new Date(),
+      summaries: [
+        {
+          id: uuidv4(),
+          is_focused: false,
+          content: unfocusedSummary,
+          date_created: new Date(),
+        },
+        {
+          id: uuidv4(),
+          is_focused: true,
+          content: focusedSummary,
+          date_created: new Date(),
+        },
+      ],
+    };
+
+    const conversation = await Conversation.findOne({ id: conversationId });
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    conversation.files.push(newFile);
+    conversation.last_updated = new Date();
+    await conversation.save();
+
+    return { name: title, id: fileId };
+  } finally {
+    if (file && fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+  }
+}
+
+async function processUploadedLink(url, conversationId) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error("Failed to fetch the URL");
+    }
+
+    const contentType = response.headers.get("content-type");
+
+    if (contentType && contentType.startsWith("text/html")) {
+      const html = await response.text();
+      const $ = cheerio.load(html);
+      const textContent = $("body").text();
+
+      if (!textContent || textContent.trim().length === 0) {
+        throw new Error("Failed to extract text from the URL");
+      }
+
+      const { title, unfocusedSummary, focusedSummary } = await processFile(
+        textContent,
+        process.env.MODEL,
+      );
+
+      const fileId = uuidv4();
+      const newFile = {
+        id: fileId,
+        original_name: url,
+        name: title,
+        type: "link",
+        date_uploaded: new Date(),
+        summaries: [
+          {
+            id: uuidv4(),
+            is_focused: false,
+            content: unfocusedSummary,
+            date_created: new Date(),
+          },
+          {
+            id: uuidv4(),
+            is_focused: true,
+            content: focusedSummary,
+            date_created: new Date(),
+          },
+        ],
+      };
+
+      const conversation = await Conversation.findOne({ id: conversationId });
+      if (!conversation) {
+        throw new Error("Conversation not found");
+      }
+
+      conversation.files.push(newFile);
+      conversation.last_updated = new Date();
+      await conversation.save();
+
+      return { name: title, id: fileId };
+    } else {
+      const tempFilePath = path.join(os.tmpdir(), uuidv4());
+      const dest = fs.createWriteStream(tempFilePath);
+      await new Promise((resolve, reject) => {
+        response.body.pipe(dest);
+        response.body.on("error", reject);
+        dest.on("finish", resolve);
+      });
+
+      const file = {
+        path: tempFilePath,
+        originalname: path.basename(url),
+        mimetype: contentType,
+      };
+
+      const result = await processUploadedFile(file, conversationId);
+      return result;
+    }
+  } catch (error) {
+    throw new Error(`Error processing uploaded link: ${error.message}`);
+  }
+}
+
+module.exports = { processUploadedFile, processUploadedLink };

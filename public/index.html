@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stratus</title>
+    <link rel="stylesheet" href="/css/main.css" />
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"
+    />
+  </head>
+  <body
+    class="h-screen overflow-hidden bg-black text-zinc-100 selection:bg-brand-pink selection:text-zinc-100"
+  >
+    <div class="flex h-screen">
+      <div class="peer w-20 transition-[width] duration-300 lg:w-72">
+        <nav
+          class="sidebar group absolute z-50 h-full w-20 overflow-hidden border-zinc-800 bg-zinc-950 transition-[width,padding,background-color] duration-300 hover:w-72 hover:border-r hover:bg-black lg:static lg:w-72 lg:bg-black lg:hover:border-r-0"
+        >
+          <ul
+            class="absolute flex h-full w-72 flex-col gap-4 px-8 py-6 group-hover:flex lg:relative lg:flex"
+          >
+            <div
+              class="absolute right-8 top-0 h-full w-16 bg-gradient-to-r from-transparent to-black"
+            ></div>
+            <div class="flex h-16 w-64 items-center gap-3">
+              <div class="font-serif text-lg font-medium">Stratus</div>
+              <div
+                class="flex rounded-md bg-brand-dark-pink px-2 py-1 font-serif text-sm text-brand-pink"
+              >
+                Dev
+              </div>
+            </div>
+            <li class="hidden overflow-hidden">
+              <span>Today</span>
+              <a href="" class="line-clamp-1 w-64" title=""
+                >This is a new chat by the way</a
+              >
+            </li>
+          </ul>
+          <!-- <ul class="w-20 flex flex-col items-center py-6 px-8 text-lg lg:hidden group-hover:hidden">
+            <li class="font-serif font-medium text-lg h-16 flex justify-center w-full">S</li>
+          </ul> -->
+        </nav>
+      </div>
+
+      <div
+        class="relative flex flex-1 flex-col items-stretch overflow-hidden border-zinc-800 bg-zinc-950 blur-0 transition-all duration-300 peer-has-[:hover]:blur-0 lg:m-4 lg:rounded-3xl lg:border lg:peer-has-[:hover]:blur-0"
+      >
+        <nav
+          class="absolute z-40 flex h-20 w-full flex-shrink-0 items-center justify-center border-zinc-800 bg-gradient-to-b from-zinc-950 via-zinc-950 via-35% to-transparent px-6 py-2 transition-all lg:static lg:m-2 lg:mb-0 lg:h-16 lg:w-auto lg:justify-between lg:rounded-2xl lg:border lg:from-zinc-900 lg:via-zinc-900 lg:to-zinc-900"
+        >
+          <div
+            class="lg:hidden"
+            style="
+              pointer-events: none;
+              transform-origin: center top;
+              position: absolute;
+              inset: 0px;
+              z-index: -1;
+            "
+          >
+            <div
+              style="
+                position: relative;
+                z-index: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(
+                  color(srgb 0 0 0 / 0) 0%,
+                  color(srgb 0 0 0 / 0) 100%
+                );
+              "
+            >
+              <div
+                style="
+                  position: absolute;
+                  z-index: 1;
+                  inset: 0px;
+                  mask: linear-gradient(
+                    rgb(0, 0, 0) 0%,
+                    rgba(0, 0, 0, 0) 12.5%
+                  );
+                  backdrop-filter: blur(96px);
+                "
+              ></div>
+              <div
+                style="
+                  position: absolute;
+                  z-index: 2;
+                  inset: 0px;
+                  mask: linear-gradient(
+                    rgb(0, 0, 0) 0%,
+                    rgb(0, 0, 0) 12.5%,
+                    rgba(0, 0, 0, 0) 25%
+                  );
+                  backdrop-filter: blur(48px);
+                "
+              ></div>
+              <div
+                style="
+                  position: absolute;
+                  z-index: 2;
+                  inset: 0px;
+                  mask: linear-gradient(
+                    rgba(0, 0, 0, 0) 0%,
+                    rgb(0, 0, 0) 12.5%,
+                    rgb(0, 0, 0) 25%,
+                    rgba(0, 0, 0, 0) 37.5%
+                  );
+                  backdrop-filter: blur(24px);
+                "
+              ></div>
+              <div
+                style="
+                  position: absolute;
+                  z-index: 3;
+                  inset: 0px;
+                  mask: linear-gradient(
+                    rgba(0, 0, 0, 0) 12.5%,
+                    rgb(0, 0, 0) 25%,
+                    rgb(0, 0, 0) 37.5%,
+                    rgba(0, 0, 0, 0) 50%
+                  );
+                  backdrop-filter: blur(12px);
+                "
+              ></div>
+              <div
+                style="
+                  position: absolute;
+                  z-index: 4;
+                  inset: 0px;
+                  mask: linear-gradient(
+                    rgba(0, 0, 0, 0) 25%,
+                    rgb(0, 0, 0) 37.5%,
+                    rgb(0, 0, 0) 50%,
+                    rgba(0, 0, 0, 0) 62.5%
+                  );
+                  backdrop-filter: blur(6px);
+                "
+              ></div>
+              <div
+                style="
+                  position: absolute;
+                  z-index: 5;
+                  inset: 0px;
+                  mask: linear-gradient(
+                    rgba(0, 0, 0, 0) 37.5%,
+                    rgb(0, 0, 0) 50%,
+                    rgb(0, 0, 0) 62.5%,
+                    rgba(0, 0, 0, 0) 75%
+                  );
+                  backdrop-filter: blur(3px);
+                "
+              ></div>
+              <div
+                style="
+                  position: absolute;
+                  z-index: 6;
+                  inset: 0px;
+                  mask: linear-gradient(
+                    rgba(0, 0, 0, 0) 50%,
+                    rgb(0, 0, 0) 62.5%,
+                    rgb(0, 0, 0) 75%,
+                    rgba(0, 0, 0, 0) 87.5%
+                  );
+                  backdrop-filter: blur(1.5px);
+                "
+              ></div>
+              <div
+                style="
+                  position: absolute;
+                  z-index: 7;
+                  inset: 0px;
+                  mask: linear-gradient(
+                    rgba(0, 0, 0, 0) 62.5%,
+                    rgb(0, 0, 0) 75%,
+                    rgb(0, 0, 0) 87.5%,
+                    rgba(0, 0, 0, 0) 100%
+                  );
+                  backdrop-filter: blur(0.75px);
+                "
+              ></div>
+            </div>
+          </div>
+          <div class="flex w-[40rem] flex-1 justify-center">
+            <div class="flex w-full justify-between md:w-[40rem] xl:w-[50rem]">
+              <div
+                class="font-serif text-xl font-semibold capitalize tracking-tight"
+                id="chat-title"
+              ></div>
+              <div class="flex items-center gap-4 font-serif">
+                <button
+                  class="cursor-pointer font-medium text-brand-pink transition-[color,transform] hover:text-brand-pink/75 active:scale-95"
+                  id="new-chat"
+                >
+                  <span>New</span>
+                </button>
+                <button
+                  class="flex cursor-pointer items-center justify-center gap-2 rounded-lg transition-[color,transform] hover:text-zinc-100/75 active:scale-95"
+                  onclick="navigator.clipboard.writeText(window.location.href);this.innerHTML = 'Copied';if (this.timeout) clearTimeout(this.timeout);this.timeout = setTimeout(() => this.innerHTML = 'Copy', 1000)"
+                >
+                  <span>Copy</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </nav>
+        <div
+          class="flex min-h-0 w-full flex-grow flex-col items-center transition-[border-radius] duration-300 lg:px-0"
+          id="chat-container"
+        >
+          <div
+            class="no_scrollbar flex w-full flex-col items-center overflow-auto"
+          >
+            <div
+              class="static -z-50 h-20 w-full flex-shrink-0 transition-[height] lg:absolute lg:h-[72px]"
+            ></div>
+            <div
+              id="messages"
+              class="flex w-full flex-col items-end gap-6 px-8 pb-6 pt-12 md:w-[40rem] md:px-0 xl:w-[50rem]"
+            ></div>
+            <div class="h-6 w-full flex-shrink-0"></div>
+          </div>
+        </div>
+        <div
+          class="h-18 flex w-full flex-shrink-0 -translate-y-6 justify-center px-8 md:px-0"
+          id="omnibar"
+        >
+          <div
+            class="relative flex w-full flex-col gap-1.5 md:w-[40rem] xl:w-[50rem]"
+          >
+            <form
+              class="group relative flex w-full flex-col rounded-xl border border-zinc-800 bg-black p-0 transition-colors focus-within:!bg-zinc-800 hover:bg-zinc-900 has-[.show-menu]:!bg-zinc-800"
+              id="omnibar-form"
+            >
+              <div
+                class="absolute -top-2 flex -translate-y-full gap-2"
+                id="upload-status-bar"
+              ></div>
+              <textarea
+                id="input"
+                placeholder="Share with Stratus"
+                class="flex w-full resize-none bg-transparent px-5 py-4 pb-2 outline-none"
+                rows="1"
+                autofocus
+              ></textarea>
+              <div
+                class="flex h-0 items-start justify-between overflow-hidden p-2 pt-0 text-sm text-zinc-400 opacity-0 transition-[height,opacity] duration-300 group-focus-within:h-11 group-focus-within:opacity-100 group-has-[.show-menu]:h-11 group-has-[.menu-overflow-control]:overflow-visible group-has-[.show-menu]:overflow-visible group-has-[.show-menu]:opacity-100"
+              >
+                <div class="flex items-center gap-2">
+                  <div class="flex">
+                    <div class="relative">
+                      <button
+                        type="button"
+                        class="pointer-events-none flex items-center justify-center gap-2 rounded-lg px-3 py-2 transition-[background-color,transform] hover:bg-zinc-700 active:scale-95 group-focus-within:pointer-events-auto group-has-[.show-menu]:pointer-events-auto"
+                        title="Upload knowledge for Stratus to study"
+                        id="upload-button"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M12 20H5.2C4.07989 20 3.51984 20 3.09202 19.782C2.71569 19.5903 2.40973 19.2843 2.21799 18.908C2 18.4802 2 17.9201 2 16.8V7.2C2 6.07989 2 5.51984 2.21799 5.09202C2.40973 4.71569 2.71569 4.40973 3.09202 4.21799C3.51984 4 4.07989 4 5.2 4H5.6C7.84021 4 8.96031 4 9.81596 4.43597C10.5686 4.81947 11.1805 5.43139 11.564 6.18404C12 7.03968 12 8.15979 12 10.4M12 20V10.4M12 20H18.8C19.9201 20 20.4802 20 20.908 19.782C21.2843 19.5903 21.5903 19.2843 21.782 18.908C22 18.4802 22 17.9201 22 16.8V7.2C22 6.07989 22 5.51984 21.782 5.09202C21.5903 4.71569 21.2843 4.40973 20.908 4.21799C20.4802 4 19.9201 4 18.8 4H18.4C16.1598 4 15.0397 4 14.184 4.43597C13.4314 4.81947 12.8195 5.43139 12.436 6.18404C12 7.03968 12 8.15979 12 10.4"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                        <span>Study</span>
+                      </button>
+                      <div
+                        class="pointer-events-none absolute -top-1 flex w-max origin-bottom-left -translate-y-full scale-0 flex-col rounded-xl border border-zinc-800 bg-zinc-900 p-1 opacity-0 transition-[opacity,transform,border-radius] has-[#upload-drop-area:active,#upload-drop-area.hover]:rounded-2xl"
+                        id="upload-menu"
+                      >
+                        <div id="upload-dialog">
+                          <div
+                            id="upload-drop-area"
+                            class="pointer-events-none flex h-0 w-20 cursor-pointer items-center justify-center rounded-lg border-dashed border-zinc-400 p-0 text-center opacity-0 transition-all duration-300 hover:bg-zinc-400 hover:text-black active:m-1 active:!h-16 active:!w-[280px] active:text-sm"
+                          >
+                            <p>Drag and drop or browse files</p>
+                            <input
+                              type="file"
+                              id="upload-file-input"
+                              multiple
+                              style="display: none"
+                              accept=".doc,.docx,.txt,.rtf,.csv,.json,.xml,.yaml,.yml,.html,.htm,.css,.scss,.sass,.js,.jsx,.ts,.tsx,.php,.py,.java,.c,.cpp,.h,.hpp,.rb,.go,.sh,.bat,.pl,.md,.swift,.kt,.scala,.rs,.dart,.sql"
+                            />
+                            <!-- .pdf currently not supported -->
+                          </div>
+                        </div>
+                        <div
+                          class="pointer-events-none flex h-0 opacity-0 transition-[height,opacity] duration-300"
+                          id="upload-menu-input"
+                        >
+                          <input
+                            type="text"
+                            id="upload-url-input"
+                            placeholder="Resource link"
+                            class="h-fit w-20 rounded-lg bg-transparent py-2 pl-3 pr-1 outline-none transition-[width] duration-300"
+                          />
+                          <button
+                            type="button"
+                            class="h-fit w-16 rounded-lg bg-white px-3 py-2 text-black transition-[background-color,transform,opacity] hover:bg-zinc-300 active:scale-95 disabled:pointer-events-none disabled:bg-zinc-700 disabled:text-zinc-500"
+                            id="upload-url-submit"
+                          >
+                            Add
+                          </button>
+                        </div>
+                        <div
+                          class="flex h-[72px] w-full flex-col overflow-hidden opacity-100 transition-[height,opacity] duration-300"
+                          id="upload-menu-inner"
+                        >
+                          <button
+                            type="button"
+                            class="pointer-events-none flex gap-2 rounded-lg px-3 py-2 transition-[background-color,transform] hover:bg-zinc-800 active:scale-95 group-focus-within:pointer-events-auto group-has-[.show-menu]:pointer-events-auto"
+                            id="upload-file-computer-button"
+                            title="Upload a file from your computer"
+                          >
+                            File from computer
+                          </button>
+                          <button
+                            type="button"
+                            class="pointer-events-none flex gap-2 rounded-lg px-3 py-2 transition-[background-color,transform] hover:bg-zinc-800 active:scale-95 group-focus-within:pointer-events-auto group-has-[.show-menu]:pointer-events-auto"
+                            id="upload-file-url-button"
+                            title="Upload the text content from a URL"
+                          >
+                            Content from URL
+                          </button>
+                          <!-- <button
+                            type="button"
+                            class="pointer-events-none flex gap-2 rounded-lg px-3 py-2 transition-[background-color,transform] hover:bg-zinc-800 active:scale-95 group-focus-within:pointer-events-auto group-has-[.show-menu]:pointer-events-auto"
+                            id="upload-youtube-button"
+                            title="Upload a YouTube video from a URL"
+                          >
+                            YouTube video
+                          </button> -->
+                        </div>
+                      </div>
+                    </div>
+                    <div class="relative">
+                      <button
+                        type="button"
+                        class="pointer-events-none flex items-center justify-center gap-2 rounded-lg px-3 py-2 transition-[background-color,transform] hover:bg-zinc-700 active:scale-95 group-focus-within:pointer-events-auto group-active:pointer-events-auto group-has-[.show-menu]:pointer-events-auto"
+                        title="Focus your knowledge"
+                        id="focus-button"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          id="focus-button-icon"
+                        >
+                          <path
+                            d="M2 4.6C2 4.03995 2 3.75992 2.10899 3.54601C2.20487 3.35785 2.35785 3.20487 2.54601 3.10899C2.75992 3 3.03995 3 3.6 3H20.4C20.9601 3 21.2401 3 21.454 3.10899C21.6422 3.20487 21.7951 3.35785 21.891 3.54601C22 3.75992 22 4.03995 22 4.6V5.26939C22 5.53819 22 5.67259 21.9672 5.79756C21.938 5.90831 21.8901 6.01323 21.8255 6.10776C21.7526 6.21443 21.651 6.30245 21.4479 6.4785L15.0521 12.0215C14.849 12.1975 14.7474 12.2856 14.6745 12.3922C14.6099 12.4868 14.562 12.5917 14.5328 12.7024C14.5 12.8274 14.5 12.9618 14.5 13.2306V18.4584C14.5 18.6539 14.5 18.7517 14.4685 18.8363C14.4406 18.911 14.3953 18.9779 14.3363 19.0315C14.2695 19.0922 14.1787 19.1285 13.9971 19.2012L10.5971 20.5612C10.2296 20.7082 10.0458 20.7817 9.89827 20.751C9.76927 20.7242 9.65605 20.6476 9.58325 20.5377C9.5 20.4122 9.5 20.2142 9.5 19.8184V13.2306C9.5 12.9618 9.5 12.8274 9.46715 12.7024C9.43805 12.5917 9.39014 12.4868 9.32551 12.3922C9.25258 12.2856 9.15102 12.1975 8.94789 12.0215L2.55211 6.4785C2.34898 6.30245 2.24742 6.21443 2.17449 6.10776C2.10986 6.01323 2.06195 5.90831 2.03285 5.79756C2 5.67259 2 5.53819 2 5.26939V4.6Z"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                        <div class="">
+                          <span id="focus-count"></span>
+                          <span>Focus</span><span id="focus-ed">ed</span>
+                        </div>
+                      </button>
+                      <div
+                        class="pointer-events-none absolute -top-1 left-1/2 flex w-max origin-bottom -translate-x-1/2 -translate-y-full scale-0 flex-col rounded-xl border border-zinc-800 bg-zinc-900 p-1 opacity-0 transition-[opacity,transform,border-radius]"
+                        id="focus-menu"
+                      ></div>
+                    </div>
+                  </div>
+                  <span class="p-0 text-xs text-zinc-500"
+                    >Knowledge Shards & LaTeX experiments enabled</span
+                  >
+                </div>
+              </div>
+              <button
+                type="submit"
+                class="absolute bottom-0 right-0 w-fit self-end transition-[opacity,transform]"
+                id="send-button"
+                title="Send message"
+              >
+                <span class="sr-only">Send</span>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="box-content h-6 w-6 p-4 text-zinc-400 transition-colors hover:text-zinc-100"
+                >
+                  <path
+                    d="M12 16L16 12M16 12L12 8M16 12H8M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z"
+                    stroke="currentColor"
+                    stroke-width="1.66"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </form>
+            <div
+              class="w-full text-center text-xs text-zinc-500"
+              title="Stratus is an AI chatbot designed to assist users by providing information and answering questions. While efforts are made to ensure accuracy and appropriateness, Stratus may occasionally generate content that is incorrect, outdated, or potentially offensive. Users should verify information independently and use discretion when interpreting generated content."
+            >
+              Stratus is an AI that may generate inaccurate or offensive
+              content. Verify information and use discretion.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="/js/bundle.js"></script>
+  </body>
+</html>

@@ -1,0 +1,179 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no_scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no_scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+/* * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-smooth: antialiased;
+} */
+
+.user-message {
+  @apply max-w-[min(80%,600px)] rounded-xl bg-zinc-800 px-4 py-2;
+}
+
+.assistant-message {
+  @apply w-full;
+}
+
+.dynamic-followup-block {
+  @apply rounded-xl border border-zinc-800 bg-zinc-900 p-1;
+}
+
+.dynamic-followup-block .followup {
+  @apply max-w-none cursor-pointer rounded-lg px-3 py-2 text-sm text-zinc-400 transition-[padding,background-color] hover:bg-zinc-800;
+}
+
+.shard .n {
+  @apply inline-flex h-6 cursor-pointer items-center gap-1 rounded-[6px] px-1 py-0.5 font-medium transition-[background-color] hover:bg-zinc-800;
+}
+
+.shard .d {
+  @apply hidden text-zinc-400;
+}
+
+.sidebar ul li {
+  @apply flex flex-col;
+}
+
+.sidebar ul li span {
+  @apply text-sm text-zinc-600;
+}
+
+.generate_loader {
+  animation: flash 800ms infinite alternate ease-in-out;
+}
+
+@keyframes flash {
+  from {
+    @apply text-zinc-600;
+  }
+
+  to {
+    @apply text-zinc-100;
+  }
+}
+
+pre code.hljs {
+  padding: 0 !important;
+}
+
+code.hljs {
+  padding: 0 !important;
+  background: none !important;
+}
+
+#input {
+  field-sizing: content;
+  max-height: 12.5rem;
+}
+
+dialog[open] {
+  animation: scale-up 300ms cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+@keyframes scale-up {
+  from {
+    scale: 0;
+  }
+
+  to {
+    scale: 1;
+  }
+}
+
+::backdrop {
+  @apply bg-black/30 backdrop-blur-sm;
+}
+
+#upload-menu.show-menu,
+#focus-menu.show-menu {
+  @apply pointer-events-auto scale-100 opacity-100;
+}
+
+#upload-menu.show-input #upload-menu-inner,
+#upload-menu.show-drop-area #upload-menu-inner {
+  @apply h-0 opacity-0;
+}
+
+#upload-menu.show-drop-area #upload-drop-area {
+  @apply pointer-events-auto h-[72px] w-72 border p-4 opacity-100;
+}
+
+#upload-drop-area.hover {
+  @apply m-1 !h-16 !w-[280px] bg-zinc-400 text-sm text-black;
+}
+
+#upload-menu.show-input #upload-menu-input {
+  @apply pointer-events-auto h-9 opacity-100;
+}
+
+#upload-menu.show-input #upload-url-input {
+  @apply w-60;
+}
+
+.checkbox-button {
+  @apply pointer-events-none flex min-w-60 cursor-pointer items-center gap-0 overflow-hidden rounded-lg border-transparent px-3 py-2 transition-[background-color,transform,border-radius] hover:bg-zinc-800 active:scale-95 group-focus-within:pointer-events-auto group-active:pointer-events-auto group-has-[.show-menu]:pointer-events-auto;
+}
+
+.checkbox-button.new {
+  @apply pr-6;
+}
+
+.checkbox-button.new::after {
+  content: "New";
+  @apply absolute right-3 ml-1 rounded-full bg-brand-pink p-1 text-[0] leading-[2] text-brand-dark-pink transition-all delay-0;
+}
+
+.checkbox-button.new:hover::after {
+  content: "New";
+  @apply px-2 py-0 text-[8px] delay-0;
+}
+
+.no-files-found {
+  @apply w-60 overflow-hidden rounded-lg px-3 pb-2 pt-1 text-center text-xs text-zinc-500 transition-[background-color,transform,border-radius,padding];
+}
+
+.checkbox-button .file-extension {
+  @apply text-xs text-zinc-500;
+}
+
+.checkbox-button:has(+ .selected:not(:active)):not(:active),
+.selected:has(+ .checkbox-button:hover:not(:active)):not(:active) {
+  @apply rounded-b-none;
+}
+
+.selected:not(:active) + .selected:not(:active),
+.checkbox-button:hover:not(:active) + .selected:not(:active),
+.selected:not(:active) + .checkbox-button:hover:not(:active) {
+  @apply rounded-t-none border-t border-t-zinc-300 pt-[7px] transition-[border-color] delay-100 duration-100;
+}
+
+.selected:not(:active) + .checkbox-button:not(:active) {
+  @apply rounded-t-none;
+}
+
+.selected {
+  @apply bg-zinc-100 text-zinc-800 hover:!bg-zinc-300;
+}
+
+.loading {
+  @apply pointer-events-none inline-block aspect-square w-8;
+  background-color: currentColor;
+  mask-size: 100%;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-image: url("data:image/svg+xml,%3Csvg width='24' height='24' stroke='%23000' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cstyle%3E.spinner_V8m1%7Btransform-origin:center;animation:spinner_zKoa 2s linear infinite%7D.spinner_V8m1 circle%7Bstroke-linecap:round;animation:spinner_YpZS 1.5s ease-out infinite%7D%40keyframes spinner_zKoa%7B100%25%7Btransform:rotate(360deg)%7D%7D%40keyframes spinner_YpZS%7B0%25%7Bstroke-dasharray:0 150;stroke-dashoffset:0%7D47.5%25%7Bstroke-dasharray:42 150;stroke-dashoffset:-16%7D95%25%2C100%25%7Bstroke-dasharray:42 150;stroke-dashoffset:-59%7D%7D%3C%2Fstyle%3E%3Cg class='spinner_V8m1'%3E%3Ccircle cx='12' cy='12' r='9.5' fill='none' stroke-width='2.5'%3E%3C%2Fcircle%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+}
