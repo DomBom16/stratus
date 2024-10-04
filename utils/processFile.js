@@ -5,9 +5,12 @@ const os = require("os");
 const { v4: uuidv4 } = require("uuid");
 const cheerio = require("cheerio");
 const fetch = require("node-fetch");
+const ytdl = require("ytdl-core");
 const { openaiClient } = require("../config/openaiClient");
 const Conversation = require("../models/Conversation");
 const { extractTextFromFile } = require("./extractTextFromFile");
+
+const model = process.env.MODEL || "openai/gpt-4o-mini";
 
 async function processFile(textContent, model) {
   // Generate title for the content
@@ -69,7 +72,7 @@ async function processUploadedFile(file, conversationId) {
 
     const { title, unfocusedSummary, focusedSummary } = await processFile(
       textContent,
-      process.env.MODEL,
+      model,
     );
 
     const fileId = uuidv4();
@@ -132,7 +135,7 @@ async function processUploadedLink(url, conversationId) {
 
       const { title, unfocusedSummary, focusedSummary } = await processFile(
         textContent,
-        process.env.MODEL,
+        model,
       );
 
       const fileId = uuidv4();
@@ -191,4 +194,86 @@ async function processUploadedLink(url, conversationId) {
   }
 }
 
-module.exports = { processUploadedFile, processUploadedLink };
+async function processYoutubeLink(youtubeUrl, conversationId) {
+  try {
+    if (!ytdl.validateURL(youtubeUrl)) {
+      throw new Error("Invalid YouTube URL");
+    }
+
+    const info = await ytdl.getInfo(youtubeUrl);
+    let captionsTrack =
+      info.player_response.captions?.playerCaptionsTracklistRenderer?.captionTracks?.find(
+        (track) => track.languageCode === "en",
+      );
+
+    if (!captionsTrack) {
+      captionsTrack =
+        info.player_response.captions?.playerCaptionsTracklistRenderer?.captionTracks?.find(
+          (track) => ["en", "es", "fr", "de", "it", "pt", "nl", "ru", "zh"].includes(track.languageCode),
+        );
+      if (!captionsTrack) {
+        throw new Error("No suitable captions found for the YouTube video");
+      }
+    }
+
+    const captionsResponse = await fetch(captionsTrack.baseUrl);
+    if (!captionsResponse.ok) {
+      throw new Error("Failed to fetch YouTube captions");
+    }
+
+    const captionsXml = await captionsResponse.text();
+    const $ = cheerio.load(captionsXml, { xmlMode: true });
+    const textContent = $("text")
+      .map((i, el) => $(el).text())
+      .get()
+      .join(" ");
+
+    if (!textContent || textContent.trim().length === 0) {
+      throw new Error("Failed to extract text from the YouTube captions");
+    }
+
+    const { title, unfocusedSummary, focusedSummary } = await processFile(
+      textContent,
+      model,
+    );
+
+    const fileId = uuidv4();
+    const newFile = {
+      id: fileId,
+      original_name: youtubeUrl,
+      name: title,
+      type: "video",
+      date_uploaded: new Date(),
+      summaries: [
+        {
+          id: uuidv4(),
+          is_focused: false,
+          content: unfocusedSummary,
+          date_created: new Date(),
+        },
+        {
+          id: uuidv4(),
+          is_focused: true,
+          content: focusedSummary,
+          date_created: new Date(),
+        },
+      ],
+    };
+
+    const conversation = await Conversation.findOne({ id: conversationId });
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    conversation.files.push(newFile);
+    conversation.last_updated = new Date();
+    await conversation.save();
+
+    return { name: title, id: fileId };
+  } catch (error) {
+    throw new Error(`Error processing YouTube link: ${error.message}`);
+  }
+}
+
+
+module.exports = { processUploadedFile, processUploadedLink, processYoutubeLink };

@@ -9,7 +9,8 @@ module.exports = {
       },
       fontFamily: {
         sans: ["Plus Jakarta Sans", "sans-serif"],
-        serif: ["Bricolage Grotesque"],
+        // sans: ["Open Sauce One", "sans-serif"],
+        serif: ["Bricolage Grotesque", "serif"],
         mono: ["JetBrains Mono"],
       },
       typography: (theme) => ({

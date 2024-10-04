@@ -16,18 +16,19 @@
     class="h-screen overflow-hidden bg-black text-zinc-100 selection:bg-brand-pink selection:text-zinc-100"
   >
     <div class="flex h-screen">
-      <div class="peer w-20 transition-[width] duration-300 lg:w-72">
+      <div class="w-0 transition-[width] duration-300 lg:w-72">
         <nav
-          class="sidebar group absolute z-50 h-full w-20 overflow-hidden border-zinc-800 bg-zinc-950 transition-[width,padding,background-color] duration-300 hover:w-72 hover:border-r hover:bg-black lg:static lg:w-72 lg:bg-black lg:hover:border-r-0"
+          class="absolute z-50 h-full w-0 overflow-hidden border-zinc-800 bg-zinc-950 transition-[width,padding,background-color] duration-300 lg:static lg:w-72 lg:bg-black"
+          id="sidebar"
         >
           <ul
-            class="absolute flex h-full w-72 flex-col gap-4 px-8 py-6 group-hover:flex lg:relative lg:flex"
+            class="absolute flex h-full w-72 flex-col gap-4 px-8 py-2 lg:py-6 lg:relative lg:flex transition-[padding] duration-300"
           >
             <div
               class="absolute right-8 top-0 h-full w-16 bg-gradient-to-r from-transparent to-black"
             ></div>
             <div class="flex h-16 w-64 items-center gap-3">
-              <div class="font-serif text-lg font-medium">Stratus</div>
+              <div class="font-serif text-xl lg:text-lg font-semibold transition-[font-size,font-weight] duration-300">Stratus</div>
               <div
                 class="flex rounded-md bg-brand-dark-pink px-2 py-1 font-serif text-sm text-brand-pink"
               >
@@ -41,17 +42,14 @@
               >
             </li>
           </ul>
-          <!-- <ul class="w-20 flex flex-col items-center py-6 px-8 text-lg lg:hidden group-hover:hidden">
-            <li class="font-serif font-medium text-lg h-16 flex justify-center w-full">S</li>
-          </ul> -->
         </nav>
       </div>
 
       <div
-        class="relative flex flex-1 flex-col items-stretch overflow-hidden border-zinc-800 bg-zinc-950 blur-0 transition-all duration-300 peer-has-[:hover]:blur-0 lg:m-4 lg:rounded-3xl lg:border lg:peer-has-[:hover]:blur-0"
+        class="relative flex flex-1 flex-col items-stretch overflow-hidden border-zinc-800 bg-zinc-950 transition-all duration-300 lg:m-4 lg:rounded-3xl lg:border"
       >
         <nav
-          class="absolute z-40 flex h-20 w-full flex-shrink-0 items-center justify-center border-zinc-800 bg-gradient-to-b from-zinc-950 via-zinc-950 via-35% to-transparent px-6 py-2 transition-all lg:static lg:m-2 lg:mb-0 lg:h-16 lg:w-auto lg:justify-between lg:rounded-2xl lg:border lg:from-zinc-900 lg:via-zinc-900 lg:to-zinc-900"
+          class="absolute z-40 flex h-20 w-full flex-shrink-0 items-center justify-center border-zinc-800 bg-gradient-to-b from-zinc-950 via-zinc-950 via-35% to-transparent px-8 py-2 transition-all lg:static lg:m-2 lg:mb-0 lg:h-16 lg:w-auto lg:justify-between lg:rounded-2xl lg:border lg:from-zinc-900 lg:via-zinc-900 lg:to-zinc-900"
         >
           <div
             class="lg:hidden"
@@ -234,7 +232,7 @@
             class="relative flex w-full flex-col gap-1.5 md:w-[40rem] xl:w-[50rem]"
           >
             <form
-              class="group relative flex w-full flex-col rounded-xl border border-zinc-800 bg-black p-0 transition-colors focus-within:!bg-zinc-800 hover:bg-zinc-900 has-[.show-menu]:!bg-zinc-800"
+              class="group relative flex w-full flex-col rounded-2xl border border-zinc-800 bg-black p-0 transition-colors focus-within:!bg-zinc-800 hover:bg-zinc-900 has-[.show-menu]:!bg-zinc-800"
               id="omnibar-form"
             >
               <div
@@ -316,7 +314,7 @@
                           </button>
                         </div>
                         <div
-                          class="flex h-[72px] w-full flex-col overflow-hidden opacity-100 transition-[height,opacity] duration-300"
+                          class="flex h-[108px] w-full flex-col overflow-hidden opacity-100 transition-[height,opacity] duration-300"
                           id="upload-menu-inner"
                         >
                           <button
@@ -325,24 +323,24 @@
                             id="upload-file-computer-button"
                             title="Upload a file from your computer"
                           >
-                            File from computer
+                            Upload from computer
                           </button>
                           <button
                             type="button"
                             class="pointer-events-none flex gap-2 rounded-lg px-3 py-2 transition-[background-color,transform] hover:bg-zinc-800 active:scale-95 group-focus-within:pointer-events-auto group-has-[.show-menu]:pointer-events-auto"
                             id="upload-file-url-button"
-                            title="Upload the text content from a URL"
+                            title="Upload files and websites from a URL"
                           >
-                            Content from URL
+                            Import from URL
                           </button>
-                          <!-- <button
+                          <button
                             type="button"
                             class="pointer-events-none flex gap-2 rounded-lg px-3 py-2 transition-[background-color,transform] hover:bg-zinc-800 active:scale-95 group-focus-within:pointer-events-auto group-has-[.show-menu]:pointer-events-auto"
                             id="upload-youtube-button"
                             title="Upload a YouTube video from a URL"
                           >
-                            YouTube video
-                          </button> -->
+                            Share YouTube video
+                          </button>
                         </div>
                       </div>
                     </div>

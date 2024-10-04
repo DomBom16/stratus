@@ -1,4 +1,3 @@
-// routes/conversations.js
 const express = require("express");
 const router = express.Router();
 const { v4: uuidv4 } = require("uuid");
@@ -32,7 +31,19 @@ router.get("/:id", async (req, res) => {
     if (!conversation) {
       return res.status(404).json({ error: "Conversation not found" });
     }
-    res.json(conversation);
+    // filter out sensitive information like file summaries, _v, and _id's
+    const { id, name, date_created, last_updated, messages, files, focused_files } = conversation;
+    const filteredConversation = {
+      id,
+      name,
+      // date_created,
+      // last_updated,
+      // messages: messages.map(({ id, role, content, tool_calls }) => ({ id, role, content, tool_calls })),
+      messages: messages.map(({ role, content, tool_calls }) => ({ role, content, tool_calls })),
+      files: files.map(({ id, name, original_name }) => ({ id, name, original_name })),
+      focused_files,
+    }
+    res.json(filteredConversation);
   } catch (error) {
     console.error("Error getting conversation:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -40,12 +51,12 @@ router.get("/:id", async (req, res) => {
 });
 
 // Check if a conversation exists by ID
-router.get("/:id/check", async (req, res) => {
+router.get("/exists/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const conversation = await Conversation.findOne({ id });
     if (conversation) {
-      res.json({ exists: true, conversationId: id });
+      res.json({ exists: true });
     } else {
       res.json({ exists: false });
     }
@@ -56,7 +67,7 @@ router.get("/:id/check", async (req, res) => {
 });
 
 // Add a message to a conversation
-router.post("/:id/messages", async (req, res) => {
+router.post("/messages/:id", async (req, res) => {
   try {
     const conversation = await Conversation.findOne({ id: req.params.id });
     if (!conversation) {
@@ -81,24 +92,6 @@ router.post("/:id/messages", async (req, res) => {
     res.status(201).json({ message: "Message saved" });
   } catch (error) {
     console.error("Error saving message:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// Update conversation title
-router.put("/:id", async (req, res) => {
-  try {
-    const conversation = await Conversation.findOneAndUpdate(
-      { id: req.params.id },
-      { name: req.body.name, last_updated: new Date() },
-      { new: true },
-    );
-    if (!conversation) {
-      return res.status(404).json({ error: "Conversation not found" });
-    }
-    res.json({ message: "Conversation updated" });
-  } catch (error) {
-    console.error("Error updating conversation:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

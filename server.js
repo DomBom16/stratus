@@ -1,16 +1,14 @@
-// server.js
 const express = require("express");
+const mongoose = require("mongoose");
 const path = require("path");
+const dotenv = require("./config/dotenvConfig");
 const { connectDB } = require("./config/db");
+const { openaiClient } = require("./config/openaiClient");
 const conversationRoutes = require("./routes/conversations");
 const fileRoutes = require("./routes/files");
 const chatRoutes = require("./routes/chat");
 const { cleanUpConversations } = require("./utils/cleanup");
-
-// Initialize
-const mongoose = require("mongoose");
-const dotenv = require("./config/dotenvConfig");
-const { openaiClient } = require("./config/openaiClient");
+const readline = require("readline");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -20,9 +18,33 @@ app.use(express.json());
 app.use(express.static("public"));
 
 // Routes
-app.use("/api/conversations", conversationRoutes);
-app.use("/api/conversations", fileRoutes);
-app.use("/api/chat", chatRoutes);
+
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: null,
+});
+
+rl.on("line", (input) => {
+  if (input.trim() === "routes") {
+    const allRoutes = [
+      ...conversationRoutes.stack.map(
+        (r) => `/api/conversation${r.route.path}`,
+      ),
+      ...chatRoutes.stack.map((r) => `/api/conversation${r.route.path}`),
+      ...fileRoutes.stack.map((r) => `/api/content${r.route.path}`),
+    ];
+    allRoutes.forEach((route, index) => {
+      console.log(`${(index + 1).toString().padStart(2, "0")}. ${route}`);
+    });
+  } else {
+    console.log(`The command "${input}" is not recognized.`);
+  }
+});
+
+app.use("/api/conversation", conversationRoutes);
+app.use("/api/conversation", chatRoutes);
+app.use("/api/content", fileRoutes);
 
 // Serve the index.html file
 app.get("/", (req, res) => {

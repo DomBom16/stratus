@@ -1,4 +1,3 @@
-// models/File.js
 const mongoose = require("mongoose");
 const Summary = require("./Summary");
 

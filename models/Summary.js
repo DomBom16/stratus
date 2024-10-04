@@ -1,4 +1,3 @@
-// models/Summary.js
 const mongoose = require("mongoose");
 
 const SummarySchema = new mongoose.Schema({

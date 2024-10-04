@@ -22,27 +22,28 @@ md.renderer.rules.code_block = (tokens, idx) => {
 // Constants
 
 const apiEndpoints = {
-  conversations: {
-    create: "/api/conversations/create",
-    id: (id) => `/api/conversations/${id}`,
-    messages: (id) => `/api/conversations/${id}/messages`,
-    check: (id) => `/api/conversations/${id}/check`,
+  conversation: {
+    create: "/api/conversation/create",
+    id: (id) => `/api/conversation/${id}`,
+    messages: (id) => `/api/conversation/messages/${id}`,
+    exists: (id) => `/api/conversation/exists/${id}`,
+    chat: {
+      title: (id) => `/api/conversation/chat/title/${id}`,
+      response: (id) => `/api/conversation/chat/response/${id}`,
+    },
     upload: {
-      file: (id) => `/api/conversations/${id}/upload/file`,
-      url: (id) => `/api/conversations/${id}/upload/url`,
-      video: (id) => `/api/conversations/${id}/upload/video`,
+      file: (id) => `/api/content/upload/file/${id}`,
+      url: (id) => `/api/content/upload/link/${id}`,
+      video: (id) => `/api/content/upload/video/${id}`,
     },
-    focus: (id, fileId) => `/api/conversations/${id}/focus/${fileId}`,
-  },
-  chat: {
-    response: {
-      answer: "/api/chat/response/answer",
-    },
-    title: "/api/chat/title",
+    focus: (id, fileId) => `/api/content/focus/${id}/${fileId}`,
+    rename: (id, fileId) => `/api/content/rename/${id}/${fileId}`,
   },
 };
 
 const fromID = (id) => document.getElementById(id);
+
+const _sidebar = fromID("sidebar");
 
 const _messagesView = fromID("messages");
 const _chatTitle = fromID("chat-title");
@@ -98,7 +99,7 @@ async function initializeConversation(id = null) {
   try {
     if (!id) {
       // Create a new conversation
-      const response = await fetch(apiEndpoints.conversations.create, {
+      const response = await fetch(apiEndpoints.conversation.create, {
         method: "POST",
       });
       const { id: newId } = await response.json();
@@ -108,11 +109,11 @@ async function initializeConversation(id = null) {
       window.history.replaceState(null, null, `/chat/${conversationId}`);
     } else {
       // Check to make sure the conversation exists
-      const checkResponse = await fetch(apiEndpoints.conversations.check(id));
+      const checkResponse = await fetch(apiEndpoints.conversation.exists(id));
       const { exists } = await checkResponse.json();
       if (!exists) {
         // Conversation does not exist, create a new one
-        const response = await fetch(apiEndpoints.conversations.create, {
+        const response = await fetch(apiEndpoints.conversation.create, {
           method: "POST",
         });
         const { id: newId } = await response.json();
@@ -184,12 +185,13 @@ _sendButton.addEventListener("click", async (e) => {
 });
 
 async function processResponse(reply) {
-  const response = await fetch(apiEndpoints.chat.response.answer, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ conversationId }),
-  });
-
+  const response = await fetch(
+    apiEndpoints.conversation.chat.response(conversationId),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
   const reader = response.body.getReader();
   const textDecoder = new TextDecoder();
 
@@ -214,7 +216,7 @@ async function processResponse(reply) {
 
         renderedContent = processRenderedContent(
           md.render(output),
-          ["dynamic_followup_block", "followup", "shard", "n", "d"],
+          ["followups", "followup", "shard", "n", "d"],
           ["div", "div", "span", "span", "span"],
         );
 
@@ -236,15 +238,6 @@ async function processResponse(reply) {
       }
 
       if (chunk.type == "tool_call") {
-        const currentHistory = JSON.parse(
-          localStorage.getItem("chatHistory") || "[]",
-        );
-
-        // Save the tool call data
-        currentHistory.push(chunk.data[0]); // data[0] is the simulated tool call
-        currentHistory.push(chunk.data[1]); // data[1] is the result of the tool call
-        localStorage.setItem("chatHistory", JSON.stringify(currentHistory));
-
         await processResponse(reply);
         return;
       }
@@ -252,16 +245,33 @@ async function processResponse(reply) {
   }
 
   if (_chatTitle.innerText == "New Chat") {
-    const response = await fetch(apiEndpoints.chat.title, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: output, conversationId }),
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    const promise = fetch(
+      apiEndpoints.conversation.chat.title(conversationId),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: output }),
+        signal,
+      },
+    ).then((response) => response.json());
+
+    _newChatButton.addEventListener("click", () => {
+      controller.abort();
     });
 
-    const data = await response.json();
-    _chatTitle.innerText = data.response;
-    // set window title
-    document.title = `${data.response} | Stratus AI`;
+    try {
+      const data = await promise;
+      _chatTitle.innerText = data.response;
+      // set window title
+      document.title = `${data.response} | Stratus AI`;
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        console.error("Error:", error);
+      }
+    }
   }
 }
 
@@ -271,7 +281,7 @@ async function processResponse(reply) {
  */
 async function loadMessages() {
   try {
-    const response = await fetch(apiEndpoints.conversations.id(conversationId));
+    const response = await fetch(apiEndpoints.conversation.id(conversationId));
     const { messages, name } = await response.json();
 
     _chatTitle.innerText = name;
@@ -297,20 +307,9 @@ async function loadMessages() {
         } else if (message.role === "assistant" && message.content) {
           // Render the assistant's message with markdown and followup blocks
           try {
-            // messageElement.innerHTML = processRenderedContent(
-            //   processRenderedContent(
-            //     md.render(message.content),
-            //     "dynamic_followup_block",
-            //     ["followup"],
-            //   ),
-            //   "shard",
-            //   ["n", "d"],
-            //   "span",
-            //   ["span", "span"],
-            // );
             messageElement.innerHTML = processRenderedContent(
               md.render(message.content),
-              ["dynamic_followup_block", "followup", "shard", "n", "d"],
+              ["followups", "followup", "shard", "n", "d"],
               ["div", "div", "span", "span", "span"],
             );
             // messageElement.innerHTML = md.render(message.content);
@@ -349,7 +348,7 @@ async function saveMessage(role, content) {
 
   try {
     const response = await fetch(
-      apiEndpoints.conversations.messages(conversationId),
+      apiEndpoints.conversation.messages(conversationId),
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -473,21 +472,21 @@ _uploadFileUrl.addEventListener("click", function () {
   _uploadMenu.classList.add("show-input");
   _uploadUrlInput.focus();
   _uploadUrlInput.value = "";
-  _uploadUrlInput.placeholder = "Link to text content";
+  _uploadUrlInput.placeholder = "Link to content";
   _uploadUrlSubmit.disabled = true;
 });
 
-// _uploadYoutube.addEventListener("click", function () {
-//   linkFor = "video";
-//   _uploadMenu.classList.add("show-input");
-//   _uploadUrlInput.focus();
-//   _uploadUrlInput.value = "";
-//   _uploadUrlInput.placeholder = "Link to video";
-//   _uploadUrlSubmit.disabled = true;
-// });
+_uploadYoutube.addEventListener("click", function () {
+  linkFor = "video";
+  _uploadMenu.classList.add("show-input");
+  _uploadUrlInput.focus();
+  _uploadUrlInput.value = "";
+  _uploadUrlInput.placeholder = "Link to video";
+  _uploadUrlSubmit.disabled = true;
+});
 
 _uploadUrlInput.addEventListener("input", function () {
-  console.log(linkFor)
+  console.log(linkFor);
 
   if (linkFor == "url") {
     _uploadUrlSubmit.disabled = !this.value.match(
@@ -501,13 +500,7 @@ _uploadUrlInput.addEventListener("input", function () {
 });
 
 _uploadUrlSubmit.addEventListener("click", function () {
-  // log stripped file name from url to console
-  const url = _uploadUrlInput.value;
-  if (linkFor == "url") {
-    uploadContent(url);
-  } else if (linkFor == "video") {
-    console.log(url.split("/").pop());
-  }
+  uploadContent(_uploadUrlInput.value);
   _uploadUrlInput.blur();
   _uploadMenu.classList.remove("show-input");
   _uploadMenu.classList.remove("show-menu");
@@ -632,22 +625,41 @@ async function uploadContent(content) {
     let response;
     console.log(formData, content);
     if (content instanceof File) {
+      console.log("File");
       response = await fetch(
-        apiEndpoints.conversations.upload.file(conversationId),
+        apiEndpoints.conversation.upload.file(conversationId),
         {
           method: "POST",
           body: formData,
         },
       );
-    } else {
+    } else if (isYoutubeLink(content)) {
+      console.log("Youtube Link");
       response = await fetch(
-        apiEndpoints.conversations.upload.url(conversationId),
+        apiEndpoints.conversation.upload.video(conversationId),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: content }),
         },
       );
+    } else {
+      console.log("URL");
+      response = await fetch(
+        apiEndpoints.conversation.upload.url(conversationId),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: content }),
+        },
+      );
+    }
+
+    function isYoutubeLink(url) {
+      const regex =
+        /^https?:\/\/(www\.)?(youtube\.com\/(watch\?(.*&)?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})(\S*)?$/;
+      const match = url.match(regex);
+      return match !== null;
     }
 
     if (!response.ok) {
@@ -679,7 +691,7 @@ async function uploadContent(content) {
 }
 
 async function renderFocusMenu(conversationId) {
-  const response = await fetch(apiEndpoints.conversations.id(conversationId));
+  const response = await fetch(apiEndpoints.conversation.id(conversationId));
   const conversation = await response.json();
 
   _focusMenu.innerHTML = "";
@@ -718,7 +730,7 @@ async function renderFocusMenu(conversationId) {
     }
     button.addEventListener("click", async () => {
       const { focused, focused_files } = await fetch(
-        apiEndpoints.conversations.focus(conversation.id, file.id),
+        apiEndpoints.conversation.focus(conversation.id, file.id),
         {
           method: "POST",
         },
@@ -791,3 +803,11 @@ function getConversationIdFromURL() {
   }
   return null;
 }
+
+window.addEventListener("mousemove", (event) => {
+  if (event.clientX < 50) {
+    _sidebar.classList.add("hover");
+  } else {
+    _sidebar.classList.remove("hover");
+  }
+});

@@ -1,4 +1,3 @@
-// models/Conversation.js
 const mongoose = require("mongoose");
 const Message = require("./Message");
 const File = require("./File");

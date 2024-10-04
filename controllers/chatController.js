@@ -1,4 +1,3 @@
-// controllers/chatController.js
 const { v4: uuidv4 } = require("uuid");
 const { openaiClient } = require("../config/openaiClient");
 const Conversation = require("../models/Conversation");
@@ -13,7 +12,7 @@ const sequenceEnd = "<__sqnd__>";
 const model = process.env.MODEL || "openai/gpt-4o-mini";
 
 const processChatResponse = async (req, res) => {
-  const { conversationId } = req.body;
+  const conversationId = req.params.id;
 
   // Retrieve the conversation from the database
   const conversation = await Conversation.findOne({ id: conversationId });
@@ -84,6 +83,14 @@ This content is from the file, "${file.name}".
 ${unfocusedSummary ? unfocusedSummary.content : "No summary available."}
 </file_summary>
 </unfocused_file>\n`;
+      } else if (file.type === "video") {
+        systemMessage += `
+<unfocused_video>
+This content is from the YouTube video, "${file.name}".
+<video_summary>
+${unfocusedSummary ? unfocusedSummary.content : "No summary available."}
+</video_summary>
+</unfocused_video>\n`;
       }
     }
   });
@@ -93,7 +100,7 @@ ${unfocusedSummary ? unfocusedSummary.content : "No summary available."}
     { role: "system", content: systemMessage },
     {
       role: "user",
-      content: `You should use Knowledge Shards and follow-ups when they're appropriate.${
+      content: `${
         conversation.files.length > 0
           ? " In the next few messages are files and websites that you should take into consideration when creating your responses."
           : ""
@@ -126,6 +133,14 @@ This content is from the file, "${file.name}". This file is focused and has a de
 ${focusedSummary ? focusedSummary.content : "No summary available."}
 </file_summary>
 </focused_file>`;
+      } else if (file.type === "video") {
+        userMessage = `
+<focused_video>
+This content is from the YouTube video, "${file.name}". This video is focused and has a detailed summary; it should be prioritized.
+<video_summary>
+${focusedSummary ? focusedSummary.content : "No summary available."}
+</video_summary>
+</focused_video>`;
       }
 
       messages.push({ role: "user", content: userMessage.trim() });

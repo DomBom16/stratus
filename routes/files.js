@@ -1,16 +1,16 @@
-// routes/files.js
 const express = require("express");
 const router = express.Router();
 const multerConfig = require("../middlewares/multerConfig");
 const {
   processUploadedFile,
   processUploadedLink,
+  processYoutubeLink,
 } = require("../utils/processFile");
 const Conversation = require("../models/Conversation");
 
 // Upload a file to a conversation
 router.post(
-  "/:id/upload/file",
+  "/upload/file/:id",
   multerConfig.single("file"),
   async (req, res) => {
     const conversationId = req.params.id;
@@ -31,7 +31,7 @@ router.post(
 );
 
 // Upload a link to a conversation
-router.post("/:id/upload/url", async (req, res) => {
+router.post("/upload/link/:id", async (req, res) => {
   const conversationId = req.params.id;
   const { url } = req.body;
 
@@ -48,8 +48,25 @@ router.post("/:id/upload/url", async (req, res) => {
   }
 });
 
+router.post("/upload/video/:id", async (req, res) => {
+  const conversationId = req.params.id;
+  const { url } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ error: "No URL provided" });
+  }
+
+  try {
+    const result = await processYoutubeLink(url, conversationId);
+    res.json(result);
+  } catch (error) {
+    console.error("Error processing uploaded link:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Modify the name of a file
-router.post("/:id/files/:fileId/name", async (req, res) => {
+router.post("/rename/:id/:fileId", async (req, res) => {
   const conversationId = req.params.id;
   const fileId = req.params.fileId;
   try {
@@ -71,7 +88,7 @@ router.post("/:id/files/:fileId/name", async (req, res) => {
 });
 
 // Focus/unfocus a file
-router.post("/:id/focus/:fileId", async (req, res) => {
+router.post("/focus/:id/:fileId", async (req, res) => {
   const conversationId = req.params.id;
   const fileId = req.params.fileId;
   try {

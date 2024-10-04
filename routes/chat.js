@@ -1,4 +1,3 @@
-// routes/chat.js
 const express = require("express");
 const router = express.Router();
 const { openaiClient } = require("../config/openaiClient");
@@ -6,8 +5,9 @@ const Conversation = require("../models/Conversation");
 const { processChatResponse } = require("../controllers/chatController");
 
 // Generate a title for a message and update conversation title
-router.post("/title", async (req, res) => {
-  const { message, conversationId } = req.body;
+router.post("/chat/title/:id", async (req, res) => {
+  const { message } = req.body;
+  const conversationId = req.params.id;
 
   try {
     const response = await openaiClient.chat.completions.create({
@@ -24,7 +24,7 @@ router.post("/title", async (req, res) => {
       ],
     });
 
-    const title = response.choices[0].message.content;
+    const title = response.choices[0].message.content.trim();
 
     // Update the conversation's name in the database
     await Conversation.findOneAndUpdate(
@@ -40,6 +40,6 @@ router.post("/title", async (req, res) => {
   }
 });
 
-router.post("/response/answer", processChatResponse);
+router.post("/chat/response/:id", processChatResponse);
 
 module.exports = router;
