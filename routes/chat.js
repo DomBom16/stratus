@@ -11,7 +11,7 @@ router.post("/chat/title/:id", async (req, res) => {
 
   try {
     const response = await openaiClient.chat.completions.create({
-      model: process.env.MODEL,
+      model: process.env.MODEL || "openai/gpt-4o-mini",
       max_tokens: 64,
       temperature: 0.5,
       messages: [

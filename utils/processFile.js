@@ -1,4 +1,3 @@
-// utils/processFile.js
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -40,7 +39,6 @@ async function processFile(textContent, model) {
           role: "system",
           content: `${textContent}\n\nUsing the above content, write a brief summary of the content (around 10% of the text length). It should be plain sentences, no bullets or over-the-top markdown formatting.`,
         },
-        { role: "user", content: textContent },
       ],
     }),
     openaiClient.chat.completions.create({

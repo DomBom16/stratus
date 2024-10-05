@@ -5,7 +5,7 @@
 | /        |              |              |          |     |         |
 | /api     | conversation | create       |          |     |         |
 | /api     | conversation |              |          | :id |         |
-| /api     | conversation | check        |          | :id |         |
+| /api     | conversation | exists       |          | :id |         |
 | /api     | conversation | messages     |          | :id |         |
 | /api     | conversation | chat         | title    | :id |         |
 | /api     | conversation | chat         | response | :id |         |

@@ -1,9 +1,26 @@
-// utils/waitingMessages.js
 const waitingMessages = [
   "Crafting the perfect response",
   "Diving deep into the data ocean for you",
   "Connecting the dots of brilliance",
-  // ... other messages
+  "Mining the depths of knowledge",
+  "Weaving a tapestry of insight",
+  "Illuminating the path to understanding",
+  "Gathering the threads of innovation",
+  "Brewing a fresh cup of wisdom",
+  "Sifting through the sands of time",
+  "Unraveling the mysteries of the code",
+  "Conjuring a solution from thin air",
+  "Tuning the frequencies of insight",
+  "Navigating the vast expanse of data",
+  "Forging a path through the digital wilderness",
+  "Unlocking the secrets of the digital realm",
+  "Synthesizing the essence of expertise",
+  "Harnessing the power of pattern recognition",
+  "Cultivating the wisdom of the ages",
+  "Combining the strengths of diverse perspectives",
+  "Synthesizing the insights of the collective",
+  "Weaving a tapestry of creative solutions",
+  "Unleashing the full potential of innovation",
 ];
 
 module.exports = { waitingMessages };

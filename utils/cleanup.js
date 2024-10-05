@@ -1,12 +1,11 @@
-// utils/cleanup.js
 const Conversation = require("../models/Conversation");
 
 function cleanUpConversations() {
   setInterval(
     async () => {
       const now = new Date();
-      const emptyThreshold = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 hours ago
-      const oldThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
+      const emptyThreshold = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+      const oldThreshold = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
 
       try {
         // Delete empty conversations older than emptyThreshold

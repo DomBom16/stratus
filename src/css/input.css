@@ -45,7 +45,7 @@
 }
 
 #sidebar.hover {
-  @apply w-72 border-r bg-black lg:border-r-0 *:flex;
+  @apply w-72 border-r bg-black *:flex lg:border-r-0;
 }
 
 #sidebar ul li {
@@ -128,6 +128,13 @@ dialog[open] {
   @apply w-60;
 }
 
+.custom-context-menu {
+  @apply absolute z-50 rounded-xl border border-zinc-800 bg-zinc-900 p-1 text-sm text-zinc-400 flex;
+}
+.context-menu-item {
+  @apply flex cursor-pointer items-center gap-0 overflow-hidden rounded-lg border-transparent px-3 py-2 transition-[background-color,transform] hover:bg-zinc-800 active:scale-95;
+}
+
 .checkbox-button {
   @apply pointer-events-none flex min-w-60 cursor-pointer items-center gap-0 overflow-hidden rounded-lg border-transparent px-3 py-2 transition-[background-color,transform,border-radius] hover:bg-zinc-800 active:scale-95 group-focus-within:pointer-events-auto group-active:pointer-events-auto group-has-[.show-menu]:pointer-events-auto;
 }
@@ -180,4 +187,8 @@ dialog[open] {
   mask-repeat: no-repeat;
   mask-position: center;
   mask-image: url("data:image/svg+xml,%3Csvg width='24' height='24' stroke='%23000' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cstyle%3E.spinner_V8m1%7Btransform-origin:center;animation:spinner_zKoa 2s linear infinite%7D.spinner_V8m1 circle%7Bstroke-linecap:round;animation:spinner_YpZS 1.5s ease-out infinite%7D%40keyframes spinner_zKoa%7B100%25%7Btransform:rotate(360deg)%7D%7D%40keyframes spinner_YpZS%7B0%25%7Bstroke-dasharray:0 150;stroke-dashoffset:0%7D47.5%25%7Bstroke-dasharray:42 150;stroke-dashoffset:-16%7D95%25%2C100%25%7Bstroke-dasharray:42 150;stroke-dashoffset:-59%7D%7D%3C%2Fstyle%3E%3Cg class='spinner_V8m1'%3E%3Ccircle cx='12' cy='12' r='9.5' fill='none' stroke-width='2.5'%3E%3C%2Fcircle%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+}
+
+.source {
+  @apply cursor-pointer whitespace-nowrap rounded-md bg-zinc-800 px-1.5 py-0.5 text-sm text-zinc-400;
 }

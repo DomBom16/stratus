@@ -3,6 +3,7 @@ import hljs from "highlight.js";
 import "@catppuccin/highlightjs/css/catppuccin-mocha.css";
 import markdownItHighlightjs from "markdown-it-highlightjs";
 import "./css/input.css";
+import { formatCitation } from "../utils/citation";
 
 const md = MarkdownIt({ typographer: false, linkify: false, html: false })
   .use(markdownItHighlightjs)
@@ -15,7 +16,9 @@ const md = MarkdownIt({ typographer: false, linkify: false, html: false })
 md.renderer.rules.code_block = (tokens, idx) => {
   const token = tokens[idx];
   const languageClass = token.info ? token.info.trim() : ""; // Get the language class
-  const highlightedCode = hljs.highlight(languageClass, token.content).value; // Highlight the code based on the language class
+  const highlightedCode = languageClass
+    ? hljs.highlight(languageClass, token.content).value
+    : hljs.highlightAuto(token.content).value; // Highlight the code based on the language class or auto-detect
   return `<pre><code class="${languageClass}">${highlightedCode}</code></pre>`;
 };
 
@@ -79,8 +82,11 @@ function processRenderedContent(content, tagNames, tagTypes) {
 
     content = content
       .replace(
-        new RegExp(`&lt;${tagName}(\\s[^>]*)?&gt;`, "gi"),
-        `<${tagType} class="${tagName.replace(/_/g, "-").toLowerCase()}" $1>`,
+        new RegExp(`&lt;${tagName}([\\s\\S]*?)&gt;`, "gi"),
+        (match, attrs) => {
+          const attributes = attrs ? modifyAttributes(attrs) : "";
+          return `<${tagType} class="${tagName.replace(/_/g, "-").toLowerCase()}"${attributes}>`;
+        },
       )
       .replace(new RegExp(`&lt;/${tagName}&gt;`, "gi"), `</${tagType}>`);
   }
@@ -88,38 +94,58 @@ function processRenderedContent(content, tagNames, tagTypes) {
   return content;
 }
 
+// Helper function to parse, modify, and reconstruct attributes
+function modifyAttributes(attrString) {
+  // Decode any HTML entities in the attributes
+  const decodedAttrs = decodeHTMLEntities(attrString);
+  // Regular expression to match attributes and their values
+  const attrRegex = /(\S+)=["']?((?:.(?!["']?\s+(?:\S+)=|[>"']))+.)["']?/g;
+  let result;
+  let modifiedAttrs = "";
+  // Iterate over all matched attributes
+  while ((result = attrRegex.exec(decodedAttrs)) !== null) {
+    let attrName = result[1];
+    let attrValue = result[2];
+    // Prefix attribute name with data-
+    attrName = `data-${attrName}`;
+    // Reconstruct the attribute string
+    modifiedAttrs += ` ${attrName}="${attrValue}"`;
+  }
+  return modifiedAttrs;
+}
+
+// Helper function to decode HTML entities
+function decodeHTMLEntities(str) {
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = str;
+  return textarea.value;
+}
+
 let conversationId = sessionStorage.getItem("conversationId") || null;
 
-/**
- * Initializes a conversation, either by creating a new one or by checking if an
- * existing one exists.
- * @param {string} id - The ID of the conversation to initialize, or null to create a new one.
- */
+async function createNewConversation() {
+  const response = await fetch(apiEndpoints.conversation.create, {
+    method: "POST",
+  });
+  const { id: newId } = await response.json();
+  conversationId = newId;
+  sessionStorage.setItem("conversationId", conversationId);
+  // Update the URL to include the new conversation ID
+  window.history.replaceState(null, null, `/chat/${conversationId}`);
+}
+
 async function initializeConversation(id = null) {
   try {
     if (!id) {
       // Create a new conversation
-      const response = await fetch(apiEndpoints.conversation.create, {
-        method: "POST",
-      });
-      const { id: newId } = await response.json();
-      conversationId = newId;
-      sessionStorage.setItem("conversationId", conversationId);
-      // Update the URL to include the new conversation ID
-      window.history.replaceState(null, null, `/chat/${conversationId}`);
+      await createNewConversation();
     } else {
       // Check to make sure the conversation exists
       const checkResponse = await fetch(apiEndpoints.conversation.exists(id));
       const { exists } = await checkResponse.json();
       if (!exists) {
         // Conversation does not exist, create a new one
-        const response = await fetch(apiEndpoints.conversation.create, {
-          method: "POST",
-        });
-        const { id: newId } = await response.json();
-        conversationId = newId;
-        sessionStorage.setItem("conversationId", conversationId);
-        window.history.replaceState(null, null, `/chat/${conversationId}`);
+        await createNewConversation();
         await loadMessages();
         renderFocusMenu(id);
       } else {
@@ -171,7 +197,6 @@ _sendButton.addEventListener("click", async (e) => {
   _messagesView.appendChild(query);
   _queryBar.value = "";
   _queryBar.dispatchEvent(new Event("input"));
-
   // Save the user message
   await saveMessage("user", query.innerText);
 
@@ -192,57 +217,88 @@ async function processResponse(reply) {
       headers: { "Content-Type": "application/json" },
     },
   );
+
   const reader = response.body.getReader();
   const textDecoder = new TextDecoder();
 
   let output = "";
   let renderedContent = "";
 
+  let timeoutId;
+
+  const startTimeout = () => {
+    clearTimeout(timeoutId); // Clear previous timeout before starting a new one
+    timeoutId = setTimeout(() => {
+      reply.innerText = "The AI took too long to respond. Please try again.";
+      throw new Error("Response timed out");
+    }, 60000);
+  };
+
+  // Start the initial timeout
+  startTimeout();
+
   while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+    try {
+      // Restart the timeout before awaiting a new chunk.
+      startTimeout();
 
-    let chunks = textDecoder.decode(value);
+      const { done, value } = await reader.read();
 
-    for (let chunk of chunks.split("<__sqnd__>")) {
-      if (!chunk) {
-        continue;
+      // Clear the timeout once the value is received successfully
+      clearTimeout(timeoutId);
+
+      if (done) break;
+
+      let chunks = textDecoder.decode(value);
+
+      for (let chunk of chunks.split("<__sqnd__>")) {
+        if (!chunk) {
+          continue;
+        }
+
+        chunk = JSON.parse(chunk);
+
+        if (chunk.type == "content") {
+          output += chunk.data;
+
+          renderedContent = processRenderedContent(
+            md.render(output),
+            ["followups", "followup", "shard", "n", "d", "source"],
+            ["div", "div", "span", "span", "span", "span"],
+          );
+
+          updateElement(reply, renderedContent);
+
+          citationSetup(reply);
+        }
+
+        if (chunk.type == "loader") {
+          // Add loader
+          const loaderParent = document.createElement("p");
+          const loader = document.createElement("em");
+          loader.classList.add("generate_loader");
+          loader.innerText = chunk.data;
+          loaderParent.appendChild(loader);
+
+          reply.innerHTML = "";
+
+          // Add the loader to the message
+          reply.appendChild(loaderParent);
+        }
+
+        if (chunk.type == "tool_call") {
+          await processResponse(reply);
+          return;
+        }
       }
-
-      chunk = JSON.parse(chunk);
-
-      if (chunk.type == "content") {
-        output += chunk.data;
-
-        renderedContent = processRenderedContent(
-          md.render(output),
-          ["followups", "followup", "shard", "n", "d"],
-          ["div", "div", "span", "span", "span"],
-        );
-
-        updateElement(reply, renderedContent);
-      }
-
-      if (chunk.type == "loader") {
-        // Add loader
-        const loaderParent = document.createElement("p");
-        const loader = document.createElement("em");
-        loader.classList.add("generate_loader");
-        loader.innerText = chunk.data;
-        loaderParent.appendChild(loader);
-
-        reply.innerHTML = "";
-
-        // Add the loader to the message
-        reply.appendChild(loaderParent);
-      }
-
-      if (chunk.type == "tool_call") {
-        await processResponse(reply);
-        return;
-      }
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
     }
   }
+
+  // Clear timeout after loop finishes
+  clearTimeout(timeoutId);
 
   if (_chatTitle.innerText == "New Chat") {
     const controller = new AbortController();
@@ -309,10 +365,13 @@ async function loadMessages() {
           try {
             messageElement.innerHTML = processRenderedContent(
               md.render(message.content),
-              ["followups", "followup", "shard", "n", "d"],
-              ["div", "div", "span", "span", "span"],
+              ["followups", "followup", "shard", "n", "d", "source"],
+              ["div", "div", "span", "span", "span", "span"],
             );
-            // messageElement.innerHTML = md.render(message.content);
+
+            // find all .source elements and set inner text to data-sname value
+            // Assume 'formatCitation' function is defined elsewhere as per previous discussions
+            citationSetup(messageElement);
           } catch (error) {
             console.error("Error rendering message:", error);
             messageElement.innerText = "Error rendering message";
@@ -336,6 +395,140 @@ async function loadMessages() {
     setFollowupEvents();
   } catch (error) {
     console.error("Error loading messages:", error);
+  }
+}
+
+function citationSetup(messageElement) {
+  const sourceElements = messageElement.querySelectorAll(".source");
+  sourceElements.forEach((element) => {
+    element.innerText = element.dataset.sname;
+
+    element.addEventListener("contextmenu", (event) => {
+      event.preventDefault(); // Prevent the default context menu
+
+      // Retrieve citation data
+      const authors = [];
+      let index = 1;
+      while (true) {
+        const firstName = element.getAttribute(
+          `data-sauthor${index}-first-name`,
+        );
+        const lastName = element.getAttribute(`data-sauthor${index}-last-name`);
+        if (!firstName && !lastName) break;
+        authors.push({ firstName, lastName });
+        index++;
+      }
+
+      const citation = {
+        authors: authors,
+        year: element.getAttribute("data-syear"),
+        month: element.getAttribute("data-smonth"),
+        day: element.getAttribute("data-sday"),
+        title: element.getAttribute("data-sname"),
+        subtitle: element.getAttribute("data-ssubtitle"),
+        publisher: element.getAttribute("data-spublisher"),
+        url: element.getAttribute("data-surl"),
+        siteName: element.getAttribute("data-ssite-name"),
+        publicationDate: element.getAttribute("data-spublication-date"),
+        accessDate: element.getAttribute("data-saccess-date"),
+      };
+
+      // Generate formatted citations
+      const formattedCitations = formatCitation(citation);
+
+      // Create the custom context menu
+      const menu = document.createElement("div");
+      menu.classList.add("custom-context-menu");
+
+      // Citation styles
+      const styles = ["APA", "MLA", "Chicago"];
+
+      styles.forEach((style) => {
+        const menuItem = document.createElement("div");
+        menuItem.classList.add("context-menu-item");
+        menuItem.innerText = `${style}`;
+        menuItem.addEventListener("click", () => {
+          const citationText = formattedCitations[style.toLowerCase()];
+          copyToClipboard(citationText);
+
+          // Clean up the menu
+          document.body.removeChild(menu);
+        });
+        menu.appendChild(menuItem);
+      });
+
+      // Add the custom menu to the body
+      document.body.appendChild(menu);
+
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const boundingBox = menu.getBoundingClientRect();
+      const menuWidth = boundingBox.width;
+      const menuHeight = boundingBox.height;
+      const x = event.clientX;
+      const y = event.clientY;
+
+      if (x + menuWidth > viewportWidth) {
+        menu.style.left = `${x - menuWidth}px`;
+      } else {
+        menu.style.left = `${x}px`;
+      }
+
+      if (y + menuHeight > viewportHeight) {
+        menu.style.top = `${y - menuHeight}px`;
+      } else {
+        menu.style.top = `${y}px`;
+      }
+
+      // Remove the menu when clicking elsewhere
+      // Look for edge cases where the menu is not a child of body
+      function cleanUpMenu() {
+        if (menu.parentNode === document.body) {
+          document.body.removeChild(menu);
+        }
+        document.removeEventListener("click", cleanUpMenu);
+      }
+
+      document.addEventListener("click", cleanUpMenu, { capture: true });
+      document.addEventListener("contextmenu", cleanUpMenu, { capture: true });
+      document.addEventListener("scroll", cleanUpMenu, { capture: true });
+      window.addEventListener("resize", cleanUpMenu, { capture: true });
+    });
+
+    element.addEventListener("click", (event) => {
+      // Open the link in a new tab
+      window.open(element.getAttribute("data-surl"), "_blank");
+    });
+  });
+
+  // Function to copy text to clipboard
+  function copyToClipboard(text) {
+    // Use the Clipboard API if available
+    if (navigator.clipboard && window.isSecureContext) {
+      // navigator.clipboard.writeText returns a promise
+      navigator.clipboard.writeText(text).catch((err) => {
+        console.error("Could not copy text: ", err);
+      });
+    } else {
+      // Use a fallback method
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      // Avoid scrolling to bottom
+      textArea.style.position = "fixed";
+      textArea.style.top = "-9999px";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        document.execCommand("copy");
+      } catch (err) {
+        console.error("Could not copy text: ", err);
+      }
+
+      document.body.removeChild(textArea);
+    }
   }
 }
 

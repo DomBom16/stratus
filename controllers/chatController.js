@@ -6,7 +6,7 @@ const { waitingMessages } = require("../utils/waitingMessages");
 const {
   handleFunctionCall,
   functionLoadMessages,
-} = require("../utils/functionMaps");
+} = require("../utils/tools");
 
 const sequenceEnd = "<__sqnd__>";
 const model = process.env.MODEL || "openai/gpt-4o-mini";

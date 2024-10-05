@@ -1,23 +1,38 @@
-// utils/functionMaps.js
 const evaluatex = require("evaluatex");
 const fetch = require("node-fetch");
 const cheerio = require("cheerio");
+const { openaiClient } = require("../config/openaiClient");
 
 const functionLoadMessages = {
   random_number: [
-    "Rolling the dice",
-    "Randomizing the results",
-    "Spinning the wheel of chance",
+    "Rolling the dice with Random Number Generator",
+    "Randomizing the results using Random Number Generator",
+    "Spinning the wheel of chance with Random Number Generator",
+    "Generating some randomness using Random Number Generator",
+    "Shuffling the deck of possibilities with Random Number Generator",
+    "Drawing from the luck jar with Random Number Generator",
+    "Letting fate decide through Random Number Generator",
+    "Giving chance a whirl with Random Number Generator",
   ],
   calculate: [
-    "Cranking out the calculations",
-    "Running the math",
-    "Doing the numbers",
+    "Cranking out the calculations with Calculator",
+    "Running the math using Calculator",
+    "Doing the numbers with Calculator",
+    "Crunching the figures using Calculator",
+    "Solving the equation with Calculator",
+    "Breaking down the math using Calculator",
+    "Working the algorithm through Calculator",
+    "Tallying it up with Calculator",
   ],
   google_search: [
-    "Scouring the depths of the internet",
-    "Searching high and low",
-    "Hunting down the answers",
+    "Scouring the depths of the internet with Google Search",
+    "Searching high and low using Google Search",
+    "Hunting down the answers with Google Search",
+    "Digging through the web archives using Google Search",
+    "Exploring the internet jungle with Google Search",
+    "Rummaging through search results using Google Search",
+    "Scanning the online universe with Google Search",
+    "Fetching knowledge from the net with Google Search",
   ],
 };
 
@@ -47,7 +62,7 @@ const functionMap = {
       throw new Error(`Error evaluating expression: ${error.message}`);
     }
   },
-  google_search: async function (query, numResults = 10) {
+  google_search: async function (query, numResults = 5) {
     const apiKey = process.env.GOOGLE_API_KEY;
     const cseId = process.env.GOOGLE_CSE_ID;
 
@@ -56,8 +71,6 @@ const functionMap = {
         "Google API Key or Custom Search Engine ID (CSE ID) is not defined in the environment variables.",
       );
     }
-
-    numResults = 3;
 
     const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(
       query,
@@ -76,6 +89,29 @@ const functionMap = {
       // Extract relevant information
       const items = searchData.items || [];
       const results = [];
+
+      results.push({
+        content: `Remember to cite your sources using the format <source sname="NAME surl="URL" sxxx="..."></source>. All available attributes are as follows:
+
+- sname: The name of the source
+- surl: The URL of the source
+- sauthor1-first-name: First name of the first author
+- sauthor1-last-name: Last name of the first author
+- sauthor2-first-name: First name of the second author
+- sauthor2-last-name: Last name of the second author
+- sauthorN-first-name: First name of the Nth author
+- sauthorN-last-name: Last name of the Nth author
+- syear: Year of publication
+- smonth: Month of publication
+- sday: Day of publication
+- ssubtitle: Subtitle of the article
+- spublisher: Publisher of the article
+- ssite-name: Name of the site where the article is published
+- spublication-date: Publication date of the article
+- saccess-date: Date when the article was accessed
+
+Using as many attributes as possible is beneficial to the user if they wish to refer to the sources.`,
+      });
 
       // Iterate over each search result
       for (const item of items) {
@@ -103,11 +139,26 @@ const functionMap = {
           // Extract text content
           const content = $("body").text().replace(/\s+/g, " ").trim();
 
+          // Summarize the content using OpenAI
+          const response = await openaiClient.chat.completions.create({
+            model: process.env.MODEL || "openai/gpt-4o-mini",
+            max_tokens: 64,
+            temperature: 0.5,
+            messages: [
+              {
+                role: "system",
+                content: `${content}\n\nUsing the above content, write a detailed summary of the content (around 50% of the text length). It should be plain sentences, no bullets or over-the-top markdown formatting.`,
+              },
+            ],
+          });
+
+          const summary = response.choices[0].message.content.trim();
+
           // Add the result to the array
           results.push({
             title,
             link,
-            content,
+            content: summary,
           });
         } catch (pageError) {
           console.error(`Error processing ${link}: ${pageError.message}`);

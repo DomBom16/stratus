@@ -6,7 +6,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "build": "webpack --mode production && tailwindcss -i ./src/css/input.css -o ./public/css/main.css --minify",
-    "watch": "webpack --watch --mode development"
+    "watch": "webpack --watch --mode development",
+    "dev:full": "concurrently --names \"SERVE,BUILD\" --prefix-colors \"blue,green\" \"npm run dev\" \"npm run watch\""
   },
   "keywords": [],
   "author": "",
@@ -42,6 +43,7 @@
   "devDependencies": {
     "@catppuccin/highlightjs": "^1.0.0",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.0.1",
     "css-loader": "^7.1.2",
     "mini-css-extract-plugin": "^2.9.0",
     "nodemon": "^3.1.4",
