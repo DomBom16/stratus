@@ -5,7 +5,7 @@ function cleanUpConversations() {
     async () => {
       const now = new Date();
       const emptyThreshold = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-      const oldThreshold = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+      const oldThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       try {
         // Delete empty conversations older than emptyThreshold

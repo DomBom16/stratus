@@ -142,12 +142,12 @@ Using as many attributes as possible is beneficial to the user if they wish to r
           // Summarize the content using OpenAI
           const response = await openaiClient.chat.completions.create({
             model: process.env.MODEL || "openai/gpt-4o-mini",
-            max_tokens: 64,
+            max_tokens: 2048,
             temperature: 0.5,
             messages: [
               {
                 role: "system",
-                content: `${content}\n\nUsing the above content, write a detailed summary of the content (around 50% of the text length). It should be plain sentences, no bullets or over-the-top markdown formatting.`,
+                content: `${content}\n\nUsing the above content, write a detailed summary of the content (around 50% of the text length). It should be plain sentences, no bullets or over-the-top markdown formatting. YOU MAY NOT OMIT IMPORTANT INFORMATION, INCLUDING: THE NAME OF THE SOURCE, THE FIRST AND LAST NAME OF ALL AUTHORS, THE YEAR, MONTH, AND DAY OF PUBLICATION, THE SUBTITLE OF THE ARTICLE, THE PUBLISHER, THE NAME OF THE SITE WHERE THE ARTICLE IS PUBLISHED, AND THE PUBLICATION DATE. You should include this important information in the summary. The body of the content should be around 50%-75% of the originaltext length.`,
               },
             ],
           });

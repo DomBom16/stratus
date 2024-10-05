@@ -263,8 +263,8 @@ async function processResponse(reply) {
 
           renderedContent = processRenderedContent(
             md.render(output),
-            ["followups", "followup", "shard", "n", "d", "source"],
-            ["div", "div", "span", "span", "span", "span"],
+            ["followups", "followup", "source"],
+            ["div", "div", "span"],
           );
 
           updateElement(reply, renderedContent);
@@ -365,8 +365,8 @@ async function loadMessages() {
           try {
             messageElement.innerHTML = processRenderedContent(
               md.render(message.content),
-              ["followups", "followup", "shard", "n", "d", "source"],
-              ["div", "div", "span", "span", "span", "span"],
+              ["followups", "followup", "source"],
+              ["div", "div", "span"],
             );
 
             // find all .source elements and set inner text to data-sname value
@@ -484,7 +484,9 @@ function citationSetup(messageElement) {
       // Look for edge cases where the menu is not a child of body
       function cleanUpMenu() {
         if (menu.parentNode === document.body) {
-          document.body.removeChild(menu);
+          if (menu && menu.parentNode === document.body) {
+            document.body.removeChild(menu);
+          }
         }
         document.removeEventListener("click", cleanUpMenu);
       }
