@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Stratus</title>
     <link rel="stylesheet" href="/css/main.css" />
-    <link rel="preconnect" href="https://rsms.me/" />
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
-    <link
+    <!-- <link rel="preconnect" href="https://rsms.me/" /> -->
+    <!-- <link rel="stylesheet" href="https://rsms.me/inter/inter.css" /> -->
+    <!-- <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"
-    />
+    /> -->
   </head>
   <body
     class="h-screen overflow-hidden bg-black text-zinc-100 selection:bg-brand-pink selection:text-zinc-100"
@@ -22,13 +22,17 @@
           id="sidebar"
         >
           <ul
-            class="absolute flex h-full w-72 flex-col gap-4 px-8 py-2 lg:py-6 lg:relative lg:flex transition-[padding] duration-300"
+            class="absolute flex h-full w-72 flex-col gap-4 px-8 py-2 transition-[padding] duration-300 lg:relative lg:flex lg:py-6"
           >
             <div
               class="absolute right-8 top-0 h-full w-16 bg-gradient-to-r from-transparent to-black"
             ></div>
             <div class="flex h-16 w-64 items-center gap-3">
-              <div class="font-serif text-xl lg:text-lg font-semibold transition-[font-size,font-weight] duration-300">Stratus</div>
+              <div
+                class="font-serif text-xl font-semibold transition-[font-size,font-weight] duration-300 lg:text-lg"
+              >
+                Stratus
+              </div>
               <div
                 class="flex rounded-md bg-brand-dark-pink px-2 py-1 font-serif text-sm text-brand-pink"
               >
@@ -49,10 +53,10 @@
         class="relative flex flex-1 flex-col items-stretch overflow-hidden border-zinc-800 bg-zinc-950 transition-all duration-300 lg:m-4 lg:rounded-3xl lg:border"
       >
         <nav
-          class="absolute z-40 flex h-20 w-full flex-shrink-0 items-center justify-center border-zinc-800 bg-gradient-to-b from-zinc-950 via-zinc-950 via-35% to-transparent px-8 py-2 transition-all lg:static lg:m-2 lg:mb-0 lg:h-16 lg:w-auto lg:justify-between lg:rounded-2xl lg:border lg:from-zinc-900 lg:via-zinc-900 lg:to-zinc-900"
+          class="absolute z-40 flex h-20 w-full flex-shrink-0 items-center justify-center border-zinc-800 bg-gradient-to-b from-zinc-950 via-zinc-950 via-35% to-transparent px-8 py-2 transition-all"
         >
           <div
-            class="lg:hidden"
+            class=""
             style="
               pointer-events: none;
               transform-origin: center top;
@@ -215,11 +219,11 @@
             class="no_scrollbar flex w-full flex-col items-center overflow-auto"
           >
             <div
-              class="static -z-50 h-20 w-full flex-shrink-0 transition-[height] lg:absolute lg:h-[72px]"
+              class="static -z-50 h-20 w-full flex-shrink-0"
             ></div>
             <div
               id="messages"
-              class="flex w-full flex-col items-end gap-6 px-8 pb-6 pt-12 md:w-[40rem] md:px-0 xl:w-[50rem]"
+              class="flex w-full flex-col items-end gap-6 px-8 pb-6 pt-2 transition-[padding-top] duration-300 md:w-[40rem] md:px-0 xl:w-[50rem]"
             ></div>
             <div class="h-6 w-full flex-shrink-0"></div>
           </div>
@@ -242,14 +246,13 @@
               <textarea
                 id="input"
                 placeholder="Share with Stratus"
-                class="flex w-full resize-none bg-transparent px-5 py-4 pb-2 outline-none"
+                class="flex w-full resize-none bg-transparent pl-5 pr-14 py-4 pb-2 outline-none"
                 rows="1"
-                autofocus
               ></textarea>
               <div
                 class="flex h-0 items-start justify-between overflow-hidden p-2 pt-0 text-sm text-zinc-400 opacity-0 transition-[height,opacity] duration-300 group-focus-within:h-11 group-focus-within:opacity-100 group-has-[.show-menu]:h-11 group-has-[.menu-overflow-control]:overflow-visible group-has-[.show-menu]:overflow-visible group-has-[.show-menu]:opacity-100"
               >
-                <div class="flex items-center gap-2">
+                <div class="flex w-full items-center justify-between gap-0">
                   <div class="flex">
                     <div class="relative">
                       <button
@@ -282,7 +285,7 @@
                         <div id="upload-dialog">
                           <div
                             id="upload-drop-area"
-                            class="pointer-events-none flex h-0 w-20 cursor-pointer items-center justify-center rounded-lg border-dashed border-zinc-400 p-0 text-center opacity-0 transition-all duration-300 hover:bg-zinc-400 hover:text-black active:m-1 active:!h-16 active:!w-[280px] active:text-sm"
+                            class="pointer-events-none flex h-0 w-60 cursor-pointer items-center justify-center rounded-lg border-dashed border-zinc-400 p-0 text-center opacity-0 transition-all duration-300 hover:bg-zinc-400 hover:text-black active:m-1 active:!h-16 active:!w-[280px] active:text-sm"
                           >
                             <p>Drag and drop or browse files</p>
                             <input
@@ -303,7 +306,7 @@
                             type="text"
                             id="upload-url-input"
                             placeholder="Resource link"
-                            class="h-fit w-20 rounded-lg bg-transparent py-2 pl-3 pr-1 outline-none transition-[width] duration-300"
+                            class="h-fit w-44 rounded-lg bg-transparent py-2 pl-3 pr-1 outline-none transition-[width] duration-300"
                           />
                           <button
                             type="button"
@@ -319,7 +322,7 @@
                         >
                           <button
                             type="button"
-                            class="pointer-events-none flex gap-2 rounded-lg px-3 py-2 transition-[background-color,transform] hover:bg-zinc-800 active:scale-95 group-focus-within:pointer-events-auto group-has-[.show-menu]:pointer-events-auto"
+                            class="checkbox-button"
                             id="upload-file-computer-button"
                             title="Upload a file from your computer"
                           >
@@ -327,15 +330,16 @@
                           </button>
                           <button
                             type="button"
-                            class="pointer-events-none flex gap-2 rounded-lg px-3 py-2 transition-[background-color,transform] hover:bg-zinc-800 active:scale-95 group-focus-within:pointer-events-auto group-has-[.show-menu]:pointer-events-auto"
+                            class="checkbox-button !scale-100 brightness-50 opacity-50 !cursor-not-allowed"
                             id="upload-file-url-button"
                             title="Upload files and websites from a URL"
+                            disabled
                           >
                             Import from URL
                           </button>
                           <button
                             type="button"
-                            class="pointer-events-none flex gap-2 rounded-lg px-3 py-2 transition-[background-color,transform] hover:bg-zinc-800 active:scale-95 group-focus-within:pointer-events-auto group-has-[.show-menu]:pointer-events-auto"
+                            class="checkbox-button"
                             id="upload-youtube-button"
                             title="Upload a YouTube video from a URL"
                           >
@@ -378,14 +382,63 @@
                       ></div>
                     </div>
                   </div>
-                  <span class="p-0 text-xs text-zinc-500"
-                    >Cited Sources and References are currently experimental</span
-                  >
+                  <div class="relative">
+                    <button
+                      type="button"
+                      class="group/inner pointer-events-none flex flex-row items-center justify-center rounded-lg px-3 py-2 transition-[background-color,transform] duration-300 hover:bg-zinc-700 active:scale-95 group-focus-within:pointer-events-auto group-active:pointer-events-auto group-has-[.show-menu]:pointer-events-auto"
+                      title="Toggle experiments"
+                      id="experiments-button"
+                    >
+                      <div
+                        class="grid grid-cols-[1fr] overflow-hidden pr-2 transition-[grid-template-columns,padding,opacity] duration-300 group-hover/inner:grid-cols-[0fr] group-hover/inner:pr-0"
+                      >
+                        <div class="overflow-hidden">2</div>
+                      </div>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M11.9995 12.0001H12.0095M15.535 15.5357C10.8488 20.222 5.46685 22.438 3.51423 20.4854C1.56161 18.5328 3.77769 13.1509 8.46398 8.46461C13.1503 3.77832 18.5322 1.56224 20.4848 3.51486C22.4374 5.46748 20.2213 10.8494 15.535 15.5357ZM15.535 8.46443C20.2213 13.1507 22.4374 18.5326 20.4848 20.4852C18.5321 22.4379 13.1502 20.2218 8.46394 15.5355C3.77765 10.8492 1.56157 5.4673 3.51419 3.51468C5.46681 1.56206 10.8487 3.77814 15.535 8.46443ZM12.4995 12.0001C12.4995 12.2763 12.2757 12.5001 11.9995 12.5001C11.7234 12.5001 11.4995 12.2763 11.4995 12.0001C11.4995 11.724 11.7234 11.5001 11.9995 11.5001C12.2757 11.5001 12.4995 11.724 12.4995 12.0001Z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <div
+                        class="grid grid-cols-[0fr] gap-0 overflow-hidden pl-0 transition-[grid-template-columns,padding,opacity] duration-300 group-hover/inner:grid-cols-[1fr] group-hover/inner:pl-2"
+                      >
+                        <div class="overflow-hidden" title="Experiments are features in development.">Experiments</div>
+                      </div>
+                    </button>
+                    <div
+                      class="pointer-events-none absolute -top-1 right-0 flex w-max origin-bottom-right -translate-y-full scale-0 flex-col rounded-xl border border-zinc-800 bg-zinc-900 p-1 opacity-0 transition-[opacity,transform,border-radius]"
+                      id="experiments-menu"
+                    >
+                      <div class="text-xs text-zinc-500 px-3 pb-0.5">Enabled Experiments</div>
+                      <button
+                        type="button"
+                        class="checkbox-button selected !pointer-events-none"
+                      >
+                        Source Excerpts
+                      </button>
+                      <button
+                        type="button"
+                        class="checkbox-button selected !pointer-events-none"
+                      >
+                        LaTeX Equations
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
               <button
                 type="submit"
-                class="absolute bottom-0 right-0 w-fit self-end transition-[opacity,transform]"
+                class="absolute top-0 right-0 w-fit self-end opacity-0 transition-[opacity,transform]"
                 id="send-button"
                 title="Send message"
               >
@@ -409,8 +462,7 @@
               </button>
             </form>
             <div
-              class="w-full text-center text-xs text-zinc-500"
-              title="Stratus is an AI chatbot designed to assist users by providing information and answering questions. While efforts are made to ensure accuracy and appropriateness, Stratus may occasionally generate content that is incorrect, outdated, or potentially offensive. Users should verify information independently and use discretion when interpreting generated content."
+              class="w-full text-center text-xs text-zinc-400"
             >
               Stratus is an AI that may generate inaccurate or offensive
               content. Verify information and use discretion.
@@ -419,6 +471,6 @@
         </div>
       </div>
     </div>
-    <script src="/js/bundle.js"></script>
+    <script defer src="/js/bundle.js"></script>
   </body>
 </html>
