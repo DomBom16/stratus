@@ -21,7 +21,7 @@
 }
 
 .user-message {
-  @apply max-w-[min(80%,600px)] rounded-xl bg-zinc-800 px-4 py-2;
+  @apply max-w-[min(80%,600px)] overflow-hidden rounded-xl bg-zinc-800 px-4 py-2;
 }
 
 .assistant-message {
@@ -53,11 +53,16 @@
 }
 
 #sidebar ul li span {
-  @apply text-sm text-zinc-600;
+  @apply text-sm text-zinc-400;
 }
 
-.generate_loader {
-  animation: flash 800ms infinite alternate ease-in-out;
+.message-loader,
+.tool-loader {
+  @apply animate-[flash_800ms_infinite_alternate_ease-in-out] transition-[color] duration-1000;
+}
+
+.loader {
+  @apply !animate-none text-zinc-400;
 }
 
 @keyframes flash {
@@ -103,7 +108,8 @@ dialog[open] {
 }
 
 #upload-menu.show-menu,
-#focus-menu.show-menu {
+#focus-menu.show-menu,
+#experiments-menu.show-menu {
   @apply pointer-events-auto scale-100 opacity-100;
 }
 
@@ -128,15 +134,90 @@ dialog[open] {
   @apply w-60;
 }
 
-.custom-context-menu {
-  @apply absolute z-50 rounded-xl border border-zinc-800 bg-zinc-900 p-1 text-sm text-zinc-400 flex;
+.citation-menu {
+  @apply absolute z-50 flex rounded-xl border border-zinc-800 bg-zinc-900 p-1 text-sm text-zinc-400 transition-[scale,filter,opacity] duration-300;
+  animation: pop-in 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
-.context-menu-item {
-  @apply flex cursor-pointer items-center gap-0 overflow-hidden rounded-lg border-transparent px-3 py-2 transition-[background-color,transform] hover:bg-zinc-800 active:scale-95;
+
+.verbatim-popup {
+  @apply absolute z-50 flex w-72 flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 p-2 text-sm text-zinc-400 transition-[scale,filter,opacity,height] duration-300 ease-out box-content;
+  animation: pop-in-no-scale 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.source-title-verbatim {
+  @apply pb-2 text-sm font-medium text-brand-pink;
+}
+
+@keyframes pop-in-no-scale {
+  from {
+    scale: 1;
+    opacity: 0;
+    filter: blur(24px);
+  }
+
+  1% {
+    opacity: 0;
+    filter: blur(24px);
+    scale: 1;
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    scale: 0.8;
+    opacity: 0;
+    filter: blur(8px);
+  }
+
+  to {
+    scale: 1;
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+.citation-menu-item {
+  @apply flex cursor-pointer items-center overflow-hidden rounded-lg border-transparent px-3 py-2 transition-[background-color,transform,padding] duration-200 hover:bg-zinc-800 active:scale-95;
+}
+
+.citation-copied-text {
+  @apply flex items-center overflow-hidden rounded-lg border-transparent px-0 py-2 transition-[background-color,transform,padding] duration-200;
+}
+
+.citation-menu:has(.copied) .citation-copied-text {
+  @apply px-3;
+}
+
+.citation-menu-grid.citation-copied-grid {
+  @apply grid grid-cols-[0fr] overflow-hidden opacity-0 transition-[grid-template-columns,opacity] duration-200;
+}
+
+.citation-menu:has(.copied) .citation-menu-grid.citation-copied-grid {
+  @apply !grid-cols-[1fr] !opacity-100;
+}
+
+.citation-menu-grid:not(.citation-copied-grid) {
+  @apply grid grid-cols-[1fr] overflow-hidden opacity-100 transition-[grid-template-columns,opacity] duration-200;
+}
+
+.citation-menu:has(.copied):not(.citation-copied-grid) .citation-menu-grid {
+  @apply grid-cols-[0fr] opacity-0;
+}
+
+.citation-menu:has(.copied) .citation-menu-item {
+  @apply px-0;
 }
 
 .checkbox-button {
   @apply pointer-events-none flex min-w-60 cursor-pointer items-center gap-0 overflow-hidden rounded-lg border-transparent px-3 py-2 transition-[background-color,transform,border-radius] hover:bg-zinc-800 active:scale-95 group-focus-within:pointer-events-auto group-active:pointer-events-auto group-has-[.show-menu]:pointer-events-auto;
+}
+
+.checkbox-button-experiments {
+  @apply flex min-w-60 cursor-pointer items-center gap-0 overflow-hidden rounded-lg border-transparent px-3 py-2 text-sm text-zinc-400 transition-[background-color,transform] hover:bg-zinc-800 active:scale-95;
 }
 
 .checkbox-button.new {
@@ -190,5 +271,5 @@ dialog[open] {
 }
 
 .source {
-  @apply cursor-pointer whitespace-nowrap rounded-md bg-zinc-800 px-1.5 py-0.5 text-sm text-zinc-400;
+  @apply cursor-pointer whitespace-nowrap rounded-md bg-zinc-800 px-1.5 py-0.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-700;
 }
