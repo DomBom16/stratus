@@ -7,7 +7,7 @@
     "dev": "nodemon server.js",
     "build": "webpack --mode production && tailwindcss -i ./src/css/input.css -o ./public/css/main.css --minify",
     "watch": "webpack --watch --mode development",
-    "dev:full": "concurrently --names \"SERVE,BUILD\" --prefix-colors \"blue,green\" \"npm run dev\" \"npm run watch\""
+    "dev:full": "concurrently --names \"SERVE,WATCH\" --prefix-colors \"blue,green\" \"npm run dev\" \"npm run watch\""
   },
   "keywords": [],
   "author": "",
@@ -15,6 +15,7 @@
   "description": "",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.25.2",
+    "@mozilla/readability": "^0.5.0",
     "@shikijs/markdown-it": "^1.12.1",
     "@tailwindcss/typography": "^0.5.14",
     "cheerio": "^1.0.0",
@@ -22,23 +23,30 @@
     "dotenv": "^16.4.5",
     "evaluatex": "^2.2.0",
     "express": "^4.19.2",
+    "fuse.js": "^7.0.0",
     "highlight.js": "^11.10.0",
+    "jsdom": "^25.0.1",
+    "katex": "^0.16.11",
     "mammoth": "^1.8.0",
     "markdown-it": "^14.1.0",
     "markdown-it-highlightjs": "^4.1.0",
     "markdown-it-katex": "^2.0.3",
+    "markdown-it-texmath": "^1.0.0",
     "mongoose": "^8.6.3",
     "multer": "^1.4.5-lts.1",
+    "natural": "^8.0.1",
     "node-fetch": "^2.7.0",
     "openai": "^4.55.5",
+    "p-limit": "^6.1.0",
     "pdf-parse": "^1.1.1",
     "pdfreader": "^3.0.5",
     "recharts": "^2.12.7",
     "shiki": "^1.12.1",
+    "string-similarity": "^4.0.4",
     "uuid": "^10.0.0",
     "xml2js": "^0.6.2",
     "yamljs": "^0.3.0",
-    "ytdl-core": "^4.11.5"
+    "ytdl-core": "npm:@distube/ytdl-core@^4.15.8"
   },
   "devDependencies": {
     "@catppuccin/highlightjs": "^1.0.0",
