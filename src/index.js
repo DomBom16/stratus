@@ -9,8 +9,19 @@ const md = MarkdownIt({ typographer: false, linkify: false, html: false })
   .use(markdownItHighlightjs)
   .use(require("markdown-it-katex"), {
     throwOnError: false,
-    errorColor: " #cc0000",
+    errorColor: "#cc0000",
+    macros: {
+      "\\mod": "\\text{mod}",
+    },
   });
+
+const replaceLatexDelimiters = (content) => {
+  return content
+    .replaceAll("\\[", "$$$$")
+    .replaceAll("\\]", "$$$$")
+    .replaceAll("\\(", "$")
+    .replaceAll("\\)", "$");
+};
 
 // Custom code block renderer to use highlight.js
 md.renderer.rules.code_block = (tokens, idx) => {
@@ -42,7 +53,33 @@ const apiEndpoints = {
     focus: (id, fileId) => `/api/content/focus/${id}/${fileId}`,
     rename: (id, fileId) => `/api/content/rename/${id}/${fileId}`,
   },
+  citations: {
+    surrounding: "/api/citations/surrounding",
+  },
 };
+
+const apiCache = new Map();
+
+async function fetchCached(url, options = {}, ttl = 5 * 60 * 1000) {
+  const cacheKey = url + JSON.stringify(options);
+
+  const now = Date.now();
+  const cachedEntry = apiCache.get(cacheKey);
+
+  // Check if the cached entry exists and is still valid
+  if (cachedEntry && now - cachedEntry.timestamp < ttl) {
+    return cachedEntry.data;
+  }
+
+  // Fetch fresh data
+  const response = await fetch(url, options);
+  const data = await response.json();
+
+  // Cache the result with a timestamp
+  apiCache.set(cacheKey, { data, timestamp: now });
+
+  return data;
+}
 
 const fromID = (id) => document.getElementById(id);
 
@@ -75,6 +112,9 @@ const _focusCount = fromID("focus-count");
 const _focusEd = fromID("focus-ed");
 const _focusIcon = fromID("focus-button-icon");
 
+const _expButton = fromID("experiments-button");
+const _expMenu = fromID("experiments-menu");
+
 function processRenderedContent(content, tagNames, tagTypes) {
   for (const tag of tagNames) {
     const tagName = tag;
@@ -94,28 +134,51 @@ function processRenderedContent(content, tagNames, tagTypes) {
   return content;
 }
 
-// Helper function to parse, modify, and reconstruct attributes
 function modifyAttributes(attrString) {
   // Decode any HTML entities in the attributes
   const decodedAttrs = decodeHTMLEntities(attrString);
-  // Regular expression to match attributes and their values
-  const attrRegex = /(\S+)=["']?((?:.(?!["']?\s+(?:\S+)=|[>"']))+.)["']?/g;
-  let result;
-  let modifiedAttrs = "";
-  // Iterate over all matched attributes
-  while ((result = attrRegex.exec(decodedAttrs)) !== null) {
-    let attrName = result[1];
-    let attrValue = result[2];
+
+  // Wrap the attributes in a temporary element for parsing
+  const tempHTML = `<div ${decodedAttrs}></div>`;
+
+  // Parse the HTML string using DOMParser
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(tempHTML, "text/html");
+
+  const tempElement = doc.body.firstElementChild;
+
+  if (!tempElement) {
+    // Handle cases where parsing failed
+    throw new Error("Failed to parse attributes");
+  }
+
+  // Create an array to store modified attributes
+  const modifiedAttrs = [];
+
+  // Iterate over all attributes
+  for (const attr of tempElement.attributes) {
+    let attrName = attr.name;
+    let attrValue = attr.value;
+
     // Prefix attribute name with data-
     attrName = `data-${attrName}`;
+
     // Reconstruct the attribute string
-    modifiedAttrs += ` ${attrName}="${attrValue}"`;
+    if (attrValue === "") {
+      // Handle boolean attributes (without a value)
+      modifiedAttrs.push(attrName);
+    } else {
+      modifiedAttrs.push(`${attrName}="${attrValue}"`);
+    }
   }
-  return modifiedAttrs;
+
+  // Return the modified attributes as a string
+  return " " + modifiedAttrs.join(" ");
 }
 
 // Helper function to decode HTML entities
 function decodeHTMLEntities(str) {
+  // Create a temporary textarea element to decode HTML entities
   const textarea = document.createElement("textarea");
   textarea.innerHTML = str;
   return textarea.value;
@@ -219,7 +282,8 @@ async function processResponse(reply) {
   );
 
   const reader = response.body.getReader();
-  const textDecoder = new TextDecoder();
+  const decoder = new TextDecoder();
+  let buffer = "";
 
   let output = "";
   let renderedContent = "";
@@ -227,7 +291,7 @@ async function processResponse(reply) {
   let timeoutId;
 
   const startTimeout = () => {
-    clearTimeout(timeoutId); // Clear previous timeout before starting a new one
+    clearTimeout(timeoutId);
     timeoutId = setTimeout(() => {
       reply.innerText = "The AI took too long to respond. Please try again.";
       throw new Error("Response timed out");
@@ -236,6 +300,33 @@ async function processResponse(reply) {
 
   // Start the initial timeout
   startTimeout();
+
+  // Function to parse SSE events
+  function parseSSEEvent(eventText) {
+    const event = {};
+    const lines = eventText.split("\n");
+    for (let line of lines) {
+      if (line.startsWith("event:")) {
+        event.type = line.slice("event:".length).trim();
+      } else if (line.startsWith("data:")) {
+        if (!event.data) event.data = "";
+        event.data += line.slice("data:".length) + "\n";
+      }
+    }
+    if (event.data) {
+      // Remove the last newline
+      event.data = event.data.slice(0, -1);
+      try {
+        event.data = JSON.parse(event.data);
+      } catch (e) {
+        console.error("Failed to parse event data", e);
+      }
+    }
+    return event;
+  }
+
+  // Variables to track loaders
+  let messageLoaderExists = false;
 
   while (true) {
     try {
@@ -249,50 +340,114 @@ async function processResponse(reply) {
 
       if (done) break;
 
-      let chunks = textDecoder.decode(value);
+      buffer += decoder.decode(value, { stream: true });
 
-      for (let chunk of chunks.split("<__sqnd__>")) {
-        if (!chunk) {
-          continue;
-        }
+      let sseEvents = buffer.split("\n\n");
+      buffer = sseEvents.pop(); // Save incomplete event
 
-        chunk = JSON.parse(chunk);
+      for (let eventText of sseEvents) {
+        if (eventText.trim() === "") continue; // Skip empty messages
 
-        if (chunk.type == "content") {
-          output += chunk.data;
+        // Parse the SSE event
+        const event = parseSSEEvent(eventText);
+
+        // Process the event based on its type
+        if (event.type === "content") {
+          const content = event.data.data;
+          output += content;
+
+          const loader = reply.querySelector(".message-loader");
+          loader?.remove();
 
           renderedContent = processRenderedContent(
-            md.render(output),
+            md.render(replaceLatexDelimiters(output)),
             ["followups", "followup", "source"],
             ["div", "div", "span"],
           );
 
-          updateElement(reply, renderedContent);
+          // Update or create the content element below the loaders
+          let contentElement = reply.querySelector(".message_content");
+          if (!contentElement) {
+            contentElement = document.createElement("div");
+            contentElement.classList.add("message_content");
+            reply.appendChild(contentElement);
+          }
+
+          updateElement(contentElement, renderedContent);
 
           citationSetup(reply);
-        }
+        } else if (event.type === "loader") {
+          const loaderMessage = event.data.data;
+          const loaderType = event.data.loaderType;
 
-        if (chunk.type == "loader") {
-          // Add loader
-          const loaderParent = document.createElement("p");
-          const loader = document.createElement("em");
-          loader.classList.add("generate_loader");
-          loader.innerText = chunk.data;
-          loaderParent.appendChild(loader);
+          if (loaderType === "message") {
+            if (!messageLoaderExists) {
+              // Create message loader
+              const loader = document.createElement("p");
+              loader.classList.add("message-loader");
+              loader.innerText = loaderMessage;
 
-          reply.innerHTML = "";
+              // Insert loader at the beginning
+              reply.prepend(loader);
+              messageLoaderExists = true;
+            } else {
+              // Update existing message loader
+              const loader = reply.querySelector(".message-loader");
+              if (loader) loader.innerText = loaderMessage;
+            }
+          } else if (loaderType === "tool") {
+            const loader = reply.querySelector(".message-loader");
+            loader?.remove();
 
-          // Add the loader to the message
-          reply.appendChild(loaderParent);
-        }
+            // Create a new tool loader
+            const toolLoader = document.createElement("p");
+            toolLoader.classList.add("tool-loader");
+            toolLoader.innerText = loaderMessage;
+            // Store toolId as data attribute
+            toolLoader.dataset.toolId = event.data.toolId;
 
-        if (chunk.type == "tool_call") {
-          await processResponse(reply);
-          return;
+            // Insert tool loader below existing loaders but before content
+            let lastLoader = reply.querySelector(".tool-loader:last-of-type");
+            if (lastLoader) {
+              lastLoader.insertAdjacentElement("afterend", toolLoader);
+            } else {
+              // If no tool loaders exist, insert after message loader
+              let messageLoader = reply.querySelector(".message-loader");
+              if (messageLoader) {
+                messageLoader.insertAdjacentElement("afterend", toolLoader);
+              } else {
+                // Insert at the top if no loaders exist
+                reply.prepend(toolLoader);
+              }
+            }
+          }
+        } else if (event.type === "loader_update") {
+          const toolId = event.data.toolId;
+          const newText = event.data.data;
+
+          // Find the tool loader with the matching toolId
+          const toolLoader = reply.querySelector(
+            `.tool-loader[data-tool-id="${toolId}"]`,
+          );
+          if (toolLoader) {
+            toolLoader.innerText = newText;
+            toolLoader.classList.add("loader");
+          }
+        } else if (event.type === "tool_call") {
+          // Remove message loader if it exists
+          const loader = reply.querySelector(".message-loader");
+          loader?.remove();
+
+          // Optionally handle tool_call data if needed
+          console.log("Received tool_call event:", event.data);
+        } else if (event.type === "error") {
+          const errorMessage = event.data.data;
+          reply.innerText = errorMessage;
         }
       }
     } catch (error) {
       clearTimeout(timeoutId);
+      console.error("Error in processResponse:", error);
       throw error;
     }
   }
@@ -300,6 +455,14 @@ async function processResponse(reply) {
   // Clear timeout after loop finishes
   clearTimeout(timeoutId);
 
+  // Remove message loader after response is complete if it wasn't already removed
+  if (messageLoaderExists) {
+    const loader = reply.querySelector(".message-loader");
+    if (loader) loader.remove();
+    messageLoaderExists = false;
+  }
+
+  // Update the conversation title if it's a new chat
   if (_chatTitle.innerText == "New Chat") {
     const controller = new AbortController();
     const { signal } = controller;
@@ -348,7 +511,7 @@ async function loadMessages() {
 
     const messageElements = messages
       .map((message) => {
-        // Pass if message.role is tool are if assistant message contains a tool_calls array with at least one element
+        // Pass if message.role is tool or if assistant message contains a tool_calls array with at least one element
         if (
           !message ||
           message.role === "tool" ||
@@ -357,32 +520,55 @@ async function loadMessages() {
           return;
 
         const messageElement = document.createElement("div");
-        if (message.role === "user" && message.content) {
-          // Render the user's message as plain text
-          messageElement.innerText = message.content;
-        } else if (message.role === "assistant" && message.content) {
-          // Render the assistant's message with markdown and followup blocks
-          try {
-            messageElement.innerHTML = processRenderedContent(
-              md.render(message.content),
-              ["followups", "followup", "source"],
-              ["div", "div", "span"],
-            );
 
-            // find all .source elements and set inner text to data-sname value
-            // Assume 'formatCitation' function is defined elsewhere as per previous discussions
-            citationSetup(messageElement);
-          } catch (error) {
-            console.error("Error rendering message:", error);
-            messageElement.innerText = "Error rendering message";
-          }
-        }
-        // Add the message to the page
+        // Add classes to the message element
         messageElement.classList.add(
           message.role === "user" ? "user-message" : "assistant-message",
           "prose",
           "prose-white",
         );
+
+        if (message.role === "user" && message.content) {
+          // Render the user's message as plain text
+          messageElement.innerText = message.content;
+        } else if (message.role === "assistant") {
+          // Check for loaders
+          if (message.loaders && message.loaders.length > 0) {
+            message.loaders.forEach((loaderMessage) => {
+              const loaderElement = document.createElement("p");
+              loaderElement.innerText = loaderMessage;
+              loaderElement.classList.add("loader"); // Add a generic loader class
+
+              // Append the loader to the message element
+              messageElement.appendChild(loaderElement);
+            });
+          }
+
+          if (message.content) {
+            // Render the assistant's message with markdown and followup blocks
+            try {
+              const contentElement = document.createElement("div");
+              contentElement.classList.add("message_content");
+
+              contentElement.innerHTML = processRenderedContent(
+                md.render(replaceLatexDelimiters(message.content)),
+                ["followups", "followup", "source"],
+                ["div", "div", "span"],
+              );
+
+              // find all .source elements and set inner text to data-sname value
+              // Assume 'citationSetup' function is defined elsewhere
+              citationSetup(contentElement);
+
+              // Append the content after the loaders
+              messageElement.appendChild(contentElement);
+            } catch (error) {
+              console.error("Error rendering message:", error);
+              messageElement.innerText = "Error rendering message";
+            }
+          }
+        }
+
         return messageElement;
       })
       .filter((element) => element && element.innerHTML !== "");
@@ -398,65 +584,302 @@ async function loadMessages() {
   }
 }
 
-function citationSetup(messageElement) {
+function extractCitationData(element) {
+  // Retrieve citation data
+  const authors = [];
+  let index = 1;
+  while (true) {
+    const firstName = element.getAttribute(`data-sauthor${index}-first-name`);
+    const lastName = element.getAttribute(`data-sauthor${index}-last-name`);
+    if (!firstName && !lastName) break;
+    authors.push({ firstName, lastName });
+    index++;
+  }
+
+  return {
+    authors: authors,
+    year: element.getAttribute("data-syear"),
+    month: element.getAttribute("data-smonth"),
+    day: element.getAttribute("data-sday"),
+    title: element.getAttribute("data-stitle"),
+    subtitle: element.getAttribute("data-ssubtitle"),
+    publisher: element.getAttribute("data-spublisher"),
+    url: element.getAttribute("data-surl"),
+    siteName: element.getAttribute("data-ssite-name"),
+    publicationYear: element.getAttribute("data-spublication-year"),
+    publicationMonth: element.getAttribute("data-spublication-month"),
+    publicationDay: element.getAttribute("data-spublication-day"),
+    accessDate: element.getAttribute("data-saccess-date"),
+    verbatim: element.getAttribute("data-sverbatim"),
+  };
+}
+
+function showVerbatimPopup(sourceElement, snippet, sourceUrl, sourceTitle) {
+  // Remove existing popup if any
+  const existingPopup = document.querySelector(".verbatim-popup");
+  if (existingPopup) {
+    existingPopup.remove();
+  }
+
+  // Process excerpt: remove newlines and trim
+  snippet = snippet.replace(/\n/g, " ").trim();
+
+  // Create container
+  const popup = document.createElement("div");
+  popup.classList.add("verbatim-popup");
+
+  const innerPopup = document.createElement("div");
+  innerPopup.classList.add("inner-verbatim-popup");
+
+  popup.appendChild(innerPopup);
+
+  // Create content div
+  const contentDiv = document.createElement("div");
+  // contentDiv.style.fontSize = "0.875rem";
+  // contentDiv.style.lineHeight = "1.6";
+  contentDiv.style.position = "relative"; // Needed for the blur div positioning
+
+  // Set excerpt content
+
+  // Function to create blur layers
+  const createBlurLayers = (position) => {
+    const blurContainer = document.createElement("div");
+    blurContainer.style.position = "absolute";
+    blurContainer.style.left = "-30px";
+    blurContainer.style.right = "30px";
+    blurContainer.style.width = "calc(100% + 60px)";
+    blurContainer.style.zIndex = "2";
+
+    if (position === "top") {
+      blurContainer.style.top = "0";
+    } else {
+      blurContainer.style.bottom = "0";
+    }
+
+    let currentBlur = 0.25; // pixels
+    let currentHeight = 44; // pixels
+
+    // Create 4 divs with varying blur levels and heights
+    for (let i = 1; i <= 12; i++) {
+      const blurLayer = document.createElement("div");
+      blurLayer.style.position = "absolute";
+      blurLayer.style.left = "0";
+      blurLayer.style.right = "0";
+      if (position === "top") {
+        blurLayer.style.top = "0";
+      } else {
+        blurLayer.style.bottom = "0";
+      }
+      blurLayer.style.height = `${currentHeight}px`; // Increase height for less blurry layers
+      blurLayer.style.background =
+        position === "top"
+          ? `linear-gradient(to bottom, rgba(24, 24, 27, ${0.025 * i}), rgba(24, 24, 27, 0))`
+          : `linear-gradient(to top, rgba(24, 24, 27, ${0.025 * i}), rgba(24, 24, 27, 0))`;
+      blurLayer.style.backdropFilter = `blur(${currentBlur}px)`; // Increase blur effect with each layer
+      blurLayer.style.zIndex = `${5 - i}`; // Ensure layers stack correctly
+      blurContainer.appendChild(blurLayer);
+
+      currentBlur *= 1.15;
+      currentHeight /= 1.1;
+    }
+
+    return blurContainer;
+  };
+
+  async function fetchAndPopulate() {
+    const data = await fetchCached(
+      apiEndpoints.citations.surrounding,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: sourceUrl, snippet }),
+      },
+      10 * 60 * 1000,
+    );
+
+    const textContent = document.createElement("div");
+    textContent.innerHTML = `<span class="text-zinc-400">${data.leading}</span><a href="${sourceUrl}" target="_blank" class="font-bold text-zinc-100">${data.snippet}</a><span class="text-zinc-400">${data.trailing}</span>`;
+
+    contentDiv.appendChild(createBlurLayers("top"));
+    contentDiv.appendChild(textContent); // Text content is sandwiched between blur layers
+    contentDiv.appendChild(createBlurLayers("bottom"));
+
+    innerPopup.appendChild(contentDiv);
+    innerPopup.removeChild(loadingDiv);
+  }
+
+  // Source link container
+  const titleDiv = document.createElement("div");
+  titleDiv.classList.add("source-title-verbatim");
+  titleDiv.innerHTML = `<a href="${sourceUrl}" target="_blank">${sourceTitle}</a>`;
+
+  const loadingDiv = document.createElement("div");
+  loadingDiv.innerHTML = "Loading excerpt...";
+
+  // Append content div and source link to the popup
+  innerPopup.appendChild(titleDiv);
+  innerPopup.appendChild(loadingDiv);
+
+  fetchAndPopulate();
+
+  setInterval(() => {
+    popup.style.height = `${innerPopup.offsetHeight}px`;
+    // positionPopup(sourceElement, popup);
+  }, 0);
+
+  // Add popup to the document
+  document.body.appendChild(popup);
+
+  // Position the popup above the sourceElement
+  function positionPopup(sourceElement, popup) {
+    const rect = sourceElement.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+    const topPos = window.scrollY + rect.top - popupRect.height - 12;
+    const bottomPos =
+      window.visualViewport.height - rect.bottom + rect.height + 6;
+    const leftPos = window.scrollX + rect.left;
+    const rightPos = window.scrollX + rect.right - popupRect.width;
+
+    console.log({ topPos, bottomPos, leftPos, rightPos });
+    console.log({ rect, popupRect });
+
+    function updatePosition() {
+      popup.style.top = "unset";
+      popup.style.bottom = `${Math.max(110, bottomPos)}px`;
+      popup.style.left = `${leftPos}px`;
+
+      if (leftPos + popupRect.width > window.innerWidth) {
+        popup.style.left = "";
+        popup.style.right = `${window.innerWidth - rightPos}px`;
+      }
+
+      if (topPos < 0) {
+        popup.style.top = `${Math.max(86, rect.bottom + 6)}px`;
+      }
+
+      requestAnimationFrame(updatePosition);
+    }
+
+    updatePosition();
+  }
+
+  positionPopup(sourceElement, popup);
+
+  // Close if user clicks outside
+  function handleOutsideClick(evt) {
+    if (!popup.contains(evt.target)) {
+      popup.style.scale = "0.8";
+      popup.style.opacity = "0";
+      popup.style.filter = "blur(32px)";
+      setTimeout(() => {
+        popup.remove();
+      }, 300);
+      document.removeEventListener("mousedown", handleOutsideClick);
+    }
+  }
+  document.addEventListener("mousedown", handleOutsideClick);
+}
+
+function citationSetup(messageElement, compactMode = false) {
   const sourceElements = messageElement.querySelectorAll(".source");
+  const uniqueCitations = [];
+
   sourceElements.forEach((element) => {
-    element.innerText = element.dataset.sname;
+    // Extract citation data
+    const citation = extractCitationData(element);
+
+    // Check if the citation already exists in uniqueCitations
+    let citationIndex = uniqueCitations.findIndex(
+      (existingCitation) => existingCitation.url === citation.url,
+    );
+
+    if (citationIndex === -1) {
+      uniqueCitations.push(citation);
+      citationIndex = uniqueCitations.length - 1; // Index of the newly added citation
+    }
+
+    // Save the citation on the element for later use
+    element.citation = citation;
+
+    element.innerHTML = `<span class="sr-only">[${citationIndex + 1 || ""}:&nbsp;</span><span class="citation">${
+      element.dataset.sdisplay ||
+      element.dataset.stitle ||
+      element.dataset.ssiteName ||
+      element.dataset.surl ||
+      citationIndex + 1 ||
+      "No title found"
+    }</span><span class="sr-only">]</span>`;
+
+    // if compact mode is enabled, set inner text to 1, 2, etc.
+    if (compactMode) {
+      element.innerHTML = `<span class="sr-only">[</span><span class="citation">${citationIndex + 1 || ""}</span><span class="sr-only">:&nbsp;${
+        element.dataset.sdisplay ||
+        element.dataset.stitle ||
+        element.dataset.ssiteName ||
+        element.dataset.surl ||
+        citationIndex + 1 ||
+        "No title found"
+      }]</span>`;
+    }
 
     element.addEventListener("contextmenu", (event) => {
       event.preventDefault(); // Prevent the default context menu
 
-      // Retrieve citation data
-      const authors = [];
-      let index = 1;
-      while (true) {
-        const firstName = element.getAttribute(
-          `data-sauthor${index}-first-name`,
-        );
-        const lastName = element.getAttribute(`data-sauthor${index}-last-name`);
-        if (!firstName && !lastName) break;
-        authors.push({ firstName, lastName });
-        index++;
+      // Remove the menu when clicking elsewhere
+      function cleanUpMenu() {
+        if (menu.parentNode === document.body) {
+          menu.style.scale = "0.8";
+          menu.style.opacity = "0";
+          menu.style.filter = "blur(8px)";
+          setTimeout(() => {
+            document.body.removeChild(menu);
+          }, 300);
+        }
+        document.removeEventListener("click", cleanUpMenu);
       }
 
-      const citation = {
-        authors: authors,
-        year: element.getAttribute("data-syear"),
-        month: element.getAttribute("data-smonth"),
-        day: element.getAttribute("data-sday"),
-        title: element.getAttribute("data-sname"),
-        subtitle: element.getAttribute("data-ssubtitle"),
-        publisher: element.getAttribute("data-spublisher"),
-        url: element.getAttribute("data-surl"),
-        siteName: element.getAttribute("data-ssite-name"),
-        publicationDate: element.getAttribute("data-spublication-date"),
-        accessDate: element.getAttribute("data-saccess-date"),
-      };
+      // Retrieve the citation data from element.citation
+      const citation = element.citation;
 
       // Generate formatted citations
       const formattedCitations = formatCitation(citation);
 
       // Create the custom context menu
       const menu = document.createElement("div");
-      menu.classList.add("custom-context-menu");
+      menu.classList.add("citation-menu");
+
+      const copiedGrid = document.createElement("div");
+      copiedGrid.classList.add("citation-menu-grid", "citation-copied-grid");
+      menu.appendChild(copiedGrid);
+
+      const copiedText = document.createElement("div");
+      copiedText.classList.add("citation-copied-text");
+      copiedText.innerHTML = "Citation&nbsp;copied";
+      copiedGrid.appendChild(copiedText);
 
       // Citation styles
       const styles = ["APA", "MLA", "Chicago"];
 
       styles.forEach((style) => {
+        const menuGrid = document.createElement("div");
+        menuGrid.classList.add("citation-menu-grid");
+        menu.appendChild(menuGrid);
+
         const menuItem = document.createElement("div");
-        menuItem.classList.add("context-menu-item");
-        menuItem.innerText = `${style}`;
+        menuItem.classList.add("citation-menu-item");
+        menuItem.innerText = style;
         menuItem.addEventListener("click", () => {
           const citationText = formattedCitations[style.toLowerCase()];
           copyToClipboard(citationText);
+          document.querySelectorAll(".citation-copied-text").forEach((item) => {
+            item.innerHTML = `${style}&nbsp;citation&nbsp;copied`;
+          });
+          menuItem.classList.add("copied");
 
-          // Clean up the menu
-          document.body.removeChild(menu);
+          setTimeout(cleanUpMenu, 1300);
         });
-        menu.appendChild(menuItem);
+        menuGrid.appendChild(menuItem);
       });
-
       // Add the custom menu to the body
       document.body.appendChild(menu);
 
@@ -480,27 +903,68 @@ function citationSetup(messageElement) {
         menu.style.top = `${y}px`;
       }
 
-      // Remove the menu when clicking elsewhere
-      // Look for edge cases where the menu is not a child of body
-      function cleanUpMenu() {
-        if (menu.parentNode === document.body) {
-          if (menu && menu.parentNode === document.body) {
-            document.body.removeChild(menu);
+      document.addEventListener(
+        "click",
+        (event) => {
+          if (!menu.contains(event.target)) {
+            cleanUpMenu();
           }
-        }
-        document.removeEventListener("click", cleanUpMenu);
-      }
-
-      document.addEventListener("click", cleanUpMenu, { capture: true });
+        },
+        { capture: true },
+      );
       document.addEventListener("contextmenu", cleanUpMenu, { capture: true });
       document.addEventListener("scroll", cleanUpMenu, { capture: true });
       window.addEventListener("resize", cleanUpMenu, { capture: true });
     });
 
-    element.addEventListener("click", (event) => {
-      // Open the link in a new tab
-      window.open(element.getAttribute("data-surl"), "_blank");
+    element.addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      const verbatim = element.dataset.sverbatim;
+      const sourceUrl = element.dataset.surl;
+      const sourceTitle = element.dataset.stitle;
+
+      // If no verbatim is available, simply open the URL in a new tab
+      if (!verbatim) {
+        window.open(sourceUrl, "_blank");
+        return;
+      }
+
+      showVerbatimPopup(element, verbatim, sourceUrl, sourceTitle);
+
+      // try {
+      //   // Make a request to the new route that returns context in three parts
+      //   const data = await fetchCached(
+      //     apiEndpoints.citations.surrounding,
+      //     {
+      //       method: "POST",
+      //       headers: { "Content-Type": "application/json" },
+      //       body: JSON.stringify({ url: sourceUrl, snippet: verbatim }),
+      //     },
+      //     10 * 60 * 1000,
+      //   );
+
+      //   if (data.matches) {
+      //     // Combine the three parts: leading, snippet, and trailing.
+      //     // The leading and trailing parts are wrapped in spans with reduced opacity.
+      //     const excerpt = `<span class="text-zinc-400">${data.leading}</span><a href="${sourceUrl}" target="_blank" class="font-bold text-zinc-100">${data.snippet}</a><span class="text-zinc-400">${data.trailing}</span>`;
+      //   } else {
+      //     // If no match was found, show verbatim as before
+      //     showVerbatimPopup(element, verbatim, sourceUrl, sourceTitle);
+      //   }
+      // } catch (err) {
+      //   console.error("Error calling citations/surrounding:", err);
+      //   showVerbatimPopup(element, verbatim, sourceUrl, sourceTitle);
+      // }
     });
+
+    element.title = `Open ${element.dataset.surl}`;
+
+    // element.addEventListener("click", () => {
+    //   // Open the link in a new tab
+    //   window.open(element.dataset.surl, "_blank");
+    // });
   });
 
   // Function to copy text to clipboard
@@ -639,6 +1103,7 @@ _queryBar.dispatchEvent(new Event("input"));
 _uploadButton.addEventListener("click", () => {
   _uploadMenu.classList.toggle("show-menu");
   _focusMenu.classList.remove("show-menu");
+  _expMenu.classList.remove("show-menu");
   if (!_uploadMenu.classList.contains("show-menu")) {
     _uploadMenu.classList.remove("show-input");
     _uploadMenu.classList.remove("show-drop-area");
@@ -651,9 +1116,27 @@ _focusButton.addEventListener("click", () => {
   _uploadMenu.classList.remove("show-menu");
   _uploadMenu.classList.remove("show-input");
   _uploadMenu.classList.remove("show-drop-area");
+  _expMenu.classList.remove("show-menu");
   if (!_focusMenu.classList.contains("show-menu")) {
     _queryBar.focus();
   }
+});
+
+_expButton.addEventListener("click", () => {
+  _expMenu.classList.toggle("show-menu");
+  _uploadMenu.classList.remove("show-menu");
+  _uploadMenu.classList.remove("show-input");
+  _uploadMenu.classList.remove("show-drop-area");
+  _focusMenu.classList.remove("show-menu");
+  if (!_expMenu.classList.contains("show-menu")) {
+    _queryBar.focus();
+  }
+});
+
+document.querySelectorAll("#experiments-menu button").forEach((button) => {
+  button.addEventListener("click", () => {
+    button.classList.toggle("selected");
+  });
 });
 
 _uploadFileComputer.addEventListener("click", function () {
@@ -735,13 +1218,16 @@ _uploadFileInput.addEventListener("change", (event) => {
 setInterval(() => {
   if (
     _uploadMenu.getBoundingClientRect().height > 0 ||
-    _focusMenu.getBoundingClientRect().height > 0
+    _focusMenu.getBoundingClientRect().height > 0 ||
+    _expMenu.getBoundingClientRect().height > 0
   ) {
     _uploadMenu.classList.add("menu-overflow-control");
     _focusMenu.classList.add("menu-overflow-control");
+    _expMenu.classList.add("menu-overflow-control");
   } else {
     _uploadMenu.classList.remove("menu-overflow-control");
     _focusMenu.classList.remove("menu-overflow-control");
+    _expMenu.classList.remove("menu-overflow-control");
   }
 }, 100);
 
@@ -1000,9 +1486,11 @@ function getConversationIdFromURL() {
 }
 
 window.addEventListener("mousemove", (event) => {
-  if (event.clientX < 50) {
+  if (event.clientX < 28) {
     _sidebar.classList.add("hover");
-  } else {
+  }
+
+  if (event.clientX > 288) {
     _sidebar.classList.remove("hover");
   }
 });
