@@ -39,7 +39,7 @@ router.get("/:id", async (req, res) => {
       // date_created,
       // last_updated,
       // messages: messages.map(({ id, role, content, tool_calls }) => ({ id, role, content, tool_calls })),
-      messages: messages.map(({ role, content, tool_calls }) => ({ role, content, tool_calls })),
+      messages: messages.map(({ role, content, tool_calls, loaders }) => ({ role, content, tool_calls, loaders })),
       files: files.map(({ id, name, original_name }) => ({ id, name, original_name })),
       focused_files,
     }
