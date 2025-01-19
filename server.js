@@ -7,6 +7,7 @@ const { openaiClient } = require("./config/openaiClient");
 const conversationRoutes = require("./routes/conversations");
 const fileRoutes = require("./routes/files");
 const chatRoutes = require("./routes/chat");
+const citationsRoutes = require("./routes/citations");
 const { cleanUpConversations } = require("./utils/cleanup");
 const readline = require("readline");
 
@@ -45,6 +46,7 @@ rl.on("line", (input) => {
 app.use("/api/conversation", conversationRoutes);
 app.use("/api/conversation", chatRoutes);
 app.use("/api/content", fileRoutes);
+app.use("/api/citations", citationsRoutes);
 
 // Serve the index.html file
 app.get("/", (req, res) => {
