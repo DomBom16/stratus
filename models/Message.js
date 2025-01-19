@@ -7,6 +7,7 @@ const MessageSchema = new mongoose.Schema({
   date_created: Date,
   tool_calls: [mongoose.Schema.Types.Mixed],
   tool_call_id: String,
+  loaders: [String],
 });
 
 module.exports = mongoose.model("Message", MessageSchema);
