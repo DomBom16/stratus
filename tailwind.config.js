@@ -8,7 +8,7 @@ module.exports = {
         "brand-dark-pink": "#472c3d",
       },
       fontFamily: {
-        sans: ["Plus Jakarta Sans", "sans-serif"],
+        sans: ["Apfel Grotezk", "sans-serif"],
         // sans: ["Open Sauce One", "sans-serif"],
         serif: ["Bricolage Grotesque", "serif"],
         mono: ["JetBrains Mono"],
