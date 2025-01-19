@@ -1,15 +1,8 @@
-const { v4: uuidv4 } = require("uuid");
-const { openaiClient } = require("../config/openaiClient");
 const Conversation = require("../models/Conversation");
 const systemPrompt = require("../system-prompt");
 const { waitingMessages } = require("../utils/waitingMessages");
-const {
-  handleFunctionCall,
-  functionLoadMessages,
-} = require("../utils/tools");
 
-const sequenceEnd = "<__sqnd__>";
-const model = process.env.MODEL || "openai/gpt-4o-mini";
+const { processStream } = require("../controllers/streamController");
 
 const processChatResponse = async (req, res) => {
   const conversationId = req.params.id;
@@ -96,11 +89,11 @@ ${unfocusedSummary ? unfocusedSummary.content : "No summary available."}
   });
 
   // Initialize the messages array with the system message
-  const messages = [
+  const initialMessages = [
     { role: "system", content: systemMessage },
     {
       role: "user",
-      content: `${
+      content: `You should always use the google_search tool as if you were a search engine. Make sure to cite 2-3 sources per 4 sentences using the <source> tag.${
         conversation.files.length > 0
           ? " In the next few messages are files and websites that you should take into consideration when creating your responses."
           : ""
@@ -143,12 +136,12 @@ ${focusedSummary ? focusedSummary.content : "No summary available."}
 </focused_video>`;
       }
 
-      messages.push({ role: "user", content: userMessage.trim() });
+      initialMessages.push({ role: "user", content: userMessage.trim() });
     }
   });
 
   // Append the conversation history
-  messages.push(...history);
+  initialMessages.push(...history);
 
   // Set headers for Server-Sent Events (SSE)
   res.writeHead(200, {
@@ -160,247 +153,37 @@ ${focusedSummary ? focusedSummary.content : "No summary available."}
   let responseStarted = false;
   const responseTimeout = setTimeout(() => {
     if (!responseStarted) {
+      const loaderMessage = `Just wait, I'm ${waitingMessages[
+        Math.floor(Math.random() * waitingMessages.length)
+      ].toLowerCase()}`;
       res.write(
-        JSON.stringify({
-          type: "loader",
-          data: `Just wait, I'm ${waitingMessages[
-            Math.floor(Math.random() * waitingMessages.length)
-          ].toLowerCase()}`,
-        }) + sequenceEnd,
+        `event: loader\ndata: ${JSON.stringify({
+          data: loaderMessage,
+          loaderType: "message",
+        })}\n\n`,
       );
     }
   }, 0);
 
-  // Define the tools/functions available to the assistant
-  const tools = [
-    {
-      type: "function",
-      function: {
-        name: "random_number",
-        description: "Generates a random number; min=0, max=100",
-        parameters: {
-          type: "object",
-          properties: {
-            min: {
-              type: "number",
-              description: "The minimum value of the range",
-            },
-            max: {
-              type: "number",
-              description: "The maximum value of the range",
-            },
-          },
-          required: ["min", "max"],
-        },
-      },
-    },
-    {
-      type: "function",
-      function: {
-        name: "calculate",
-        description:
-          'Calculates the result of an expression using evaluatex; Examples include "2 + 2", "sin(PI / 2) + LN2 ^ E + hypot(3, 4)", "4a(1 + b)", "\\frac 1{20}3".',
-        parameters: {
-          type: "object",
-          properties: {
-            expression: {
-              type: "string",
-              description: "The expression to evaluate",
-            },
-            latex: {
-              type: "boolean",
-              description: "Whether to parse the expression as LaTeX or ASCII",
-            },
-          },
-          required: ["expression"],
-        },
-      },
-    },
-    {
-      type: "function",
-      function: {
-        name: "google_search",
-        description: "Searches Google for the given query",
-        parameters: {
-          type: "object",
-          properties: {
-            query: {
-              type: "string",
-              description: "The query to search for",
-            },
-            numResults: {
-              type: "number",
-              description: "The number of results to return",
-            },
-          },
-          required: ["query", "numResults"],
-        },
-      },
-    },
-  ];
-
+  // Start processing the conversation
   try {
-    // Initiate the OpenAI API request with streaming
-    const stream = await openaiClient.chat.completions.create({
-      model,
-      messages,
-      tools,
-      tool_choice: "auto",
-      stream: true,
-      max_tokens: 8000,
-      temperature: 0.7,
-    });
-
-    let assistantContent = "";
-    let bufferedFunctionCall = {
-      functionName: "",
-      functionArgs: "",
-      toolId: "",
-    };
-    let previousIndex = 0;
-
-    // Helper function to format function names
-    function toTitleCase(str) {
-      return str.replace(/\w\S*/g, (txt) => {
-        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-      });
-    }
-
-    // Process the streamed response
-    for await (const chunk of stream) {
-      if (!responseStarted) {
-        clearTimeout(responseTimeout);
-        responseStarted = true;
-      }
-
-      const content = chunk.choices[0]?.delta?.content || "";
-      const toolId = chunk.choices[0]?.delta?.tool_calls?.[0]?.id || null;
-      const functionCall = chunk.choices[0]?.delta?.tool_calls;
-      const functionName = functionCall?.[0]?.function?.name ?? null;
-      const functionArgs = functionCall?.[0]?.function?.arguments ?? null;
-      const currentIndex = functionCall?.[0]?.index ?? null;
-
-      // Handle function call initiation
-      if (functionName) {
-        bufferedFunctionCall.functionName = functionName;
-        res.write(
-          JSON.stringify({
-            type: "loader",
-            data:
-              functionLoadMessages[functionName][
-                Math.floor(
-                  Math.random() * functionLoadMessages[functionName].length,
-                )
-              ] || `Running ${toTitleCase(functionName.replace("_", " "))}`,
-          }) + sequenceEnd,
-        );
-      }
-
-      if (toolId) {
-        bufferedFunctionCall.toolId = toolId;
-      }
-
-      // Process function calls
-      if (bufferedFunctionCall.functionName) {
-        if (previousIndex !== currentIndex) {
-          // New function call detected
-          try {
-            const result = await handleFunctionCall(
-              bufferedFunctionCall.functionName,
-              bufferedFunctionCall.functionArgs,
-            );
-
-            // Create messages for the assistant's function call and the tool's response
-            const assistantFunctionMessage = {
-              id: uuidv4(),
-              role: "assistant",
-              tool_calls: [
-                {
-                  id: bufferedFunctionCall.toolId,
-                  type: "function",
-                  function: {
-                    name: bufferedFunctionCall.functionName,
-                    arguments: bufferedFunctionCall.functionArgs,
-                  },
-                },
-              ],
-              date_created: new Date(),
-            };
-
-            const toolMessage = {
-              id: uuidv4(),
-              role: "tool",
-              content: result.toString(),
-              tool_call_id: bufferedFunctionCall.toolId,
-              date_created: new Date(),
-            };
-
-            // Save messages to the conversation
-            conversation.messages.push(assistantFunctionMessage);
-            conversation.messages.push(toolMessage);
-            conversation.last_updated = new Date();
-            await conversation.save();
-
-            // Send the tool call result back to the client
-            res.write(
-              JSON.stringify({
-                type: "tool_call",
-                data: [assistantFunctionMessage, toolMessage],
-              }) + sequenceEnd,
-            );
-          } catch (error) {
-            res.write(
-              JSON.stringify({
-                type: "error",
-                data: `Error: ${error.message}`,
-              }) + sequenceEnd,
-            );
-          }
-
-          // Reset the buffer for the next function call
-          bufferedFunctionCall = {
-            functionName: "",
-            functionArgs: "",
-            toolId: "",
-          };
-          previousIndex = currentIndex;
-        } else {
-          // Accumulate function arguments
-          bufferedFunctionCall.functionArgs += functionArgs;
-        }
-      } else if (content) {
-        // Accumulate assistant's content response
-        assistantContent += content;
-        res.write(
-          JSON.stringify({ type: "content", data: content }) + sequenceEnd,
-        );
-      }
-    }
-
-    // After the stream ends, save the assistant's message
-    if (assistantContent.trim() !== "") {
-      const assistantMessage = {
-        id: uuidv4(),
-        role: "assistant",
-        content: assistantContent,
-        date_created: new Date(),
-      };
-
-      conversation.messages.push(assistantMessage);
-      conversation.last_updated = new Date();
-      await conversation.save();
-    }
-
+    await processStream(
+      initialMessages,
+      res,
+      conversation,
+      0, // initial recursion depth
+    );
     res.end();
   } catch (error) {
     console.error("Error in /chat/response/answer:", error);
+    const errorMessage =
+      error.message ||
+      "An error occurred while processing your request. Please try again later.";
     res.write(
-      JSON.stringify({
-        type: "error",
-        data:
-          error.message ||
-          "An error occurred while processing your request. Please try again later.",
-      }) + sequenceEnd,
+      `event: error\ndata: ${JSON.stringify({
+        data: errorMessage,
+        stack: error.stack,
+      })}\n\n`,
     );
     res.end();
   }
