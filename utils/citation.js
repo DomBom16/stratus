@@ -1,4 +1,104 @@
 function formatCitation(citation) {
+  // first, coerce dates to proper format (e.g., y=2029, m=Jan., d=21 -> y=2029, m=01, d=21)
+  const months = [
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+  ];
+  if (citation.month) {
+    citation.month = citation.month.toLowerCase();
+    if (months.includes(citation.month)) {
+      citation.month = months
+        .indexOf(citation.month)
+        .toString()
+        .padStart(2, "0");
+    }
+    if (months.map((m) => m.slice(0, 3)).includes(citation.month)) {
+      citation.month = months
+        .map((m) => m.slice(0, 3))
+        .indexOf(citation.month)
+        .toString()
+        .padStart(2, "0");
+    }
+    if (months.map((m) => m.slice(0, 4)).includes(citation.month)) {
+      citation.month = months
+        .map((m) => m.slice(0, 4))
+        .indexOf(citation.month)
+        .toString()
+        .padStart(2, "0");
+    }
+    if (months.map((m) => m.slice(0, 3) + ".").includes(citation.month)) {
+      citation.month = months
+        .map((m) => m.slice(0, 3) + ".")
+        .indexOf(citation.month)
+        .toString()
+        .padStart(2, "0");
+    }
+    if (months.map((m) => m.slice(0, 4) + ".").includes(citation.month)) {
+      citation.month = months
+        .map((m) => m.slice(0, 4) + ".")
+        .indexOf(citation.month)
+        .toString()
+        .padStart(2, "0");
+    }
+  }
+  // zero-pad day
+  if (citation.day) {
+    citation.day = String(citation.day).padStart(2, "0");
+  }
+
+  // format publication date the same way
+  if (citation.publicationMonth) {
+    citation.publicationMonth = citation.publicationMonth.toLowerCase();
+    if (months.includes(citation.publicationMonth)) {
+      citation.publicationMonth = months
+        .indexOf(citation.publicationMonth)
+        .toString()
+        .padStart(2, "0");
+    }
+    if (months.map((m) => m.slice(0, 3)).includes(citation.publicationMonth)) {
+      citation.publicationMonth = months
+        .map((m) => m.slice(0, 3))
+        .indexOf(citation.publicationMonth)
+        .toString()
+        .padStart(2, "0");
+    }
+    if (months.map((m) => m.slice(0, 4)).includes(citation.publicationMonth)) {
+      citation.publicationMonth = months
+        .map((m) => m.slice(0, 4))
+        .indexOf(citation.publicationMonth)
+        .toString()
+        .padStart(2, "0");
+    }
+    if (
+      months.map((m) => m.slice(0, 3) + ".").includes(citation.publicationMonth)
+    ) {
+      citation.publicationMonth = months
+        .map((m) => m.slice(0, 3) + ".")
+        .indexOf(citation.publicationMonth)
+        .toString()
+        .padStart(2, "0");
+    }
+    if (
+      months.map((m) => m.slice(0, 4) + ".").includes(citation.publicationMonth)
+    ) {
+      citation.publicationMonth = months
+        .map((m) => m.slice(0, 4) + ".")
+        .indexOf(citation.publicationMonth)
+        .toString()
+        .padStart(2, "0");
+    }
+  }
+
   const apa = formatCitationAPA(citation);
   const mla = formatCitationMLA(citation);
   const chicago = formatCitationChicago(citation);
@@ -38,14 +138,27 @@ function formatAuthorsAPA(authors) {
   }
 }
 
-
 function formatDateAPA(citation) {
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
   if (citation.year) {
     let dateStr = `(${citation.year}`;
     if (citation.month) {
-      dateStr += `, ${citation.month}`;
+      dateStr += `, ${months[Number(citation.month) - 1]}`;
       if (citation.day) {
-        dateStr += ` ${citation.day}`;
+        dateStr += ` ${Number(citation.day)}`;
       }
     }
     dateStr += ").";
@@ -110,7 +223,6 @@ function formatSingleAuthorMLA(author) {
   }
 }
 
-
 function formatCitationMLA(citation) {
   let authors = formatAuthorsMLA(citation.authors);
   let title = citation.title
@@ -118,9 +230,29 @@ function formatCitationMLA(citation) {
     : '"[No title]."';
   const siteName = citation.siteName ? citation.siteName : "";
   const publisher = citation.publisher ? citation.publisher : "";
-  const publicationDate = citation.publicationDate
-    ? citation.publicationDate
-    : "n.d.";
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  const publicationYear = citation.publicationYear ? citation.publicationYear : "";
+  const publicationMonth = months[Number(citation.publicationMonth) - 1]
+    ? `${months[Number(citation.publicationMonth) - 1]}`
+    : "";
+  const publicationDay = Number(citation.publicationDay) ? `${Number(citation.publicationDay)}` : "";
+  const publicationDate =
+    publicationYear && publicationMonth && publicationDay
+      ? `${publicationYear}, ${publicationMonth} ${publicationDay}`
+      : "";
   const url = citation.url ? citation.url : "";
   const accessDate = citation.accessDate
     ? `Accessed ${citation.accessDate}.`
@@ -160,7 +292,6 @@ function formatAuthorsChicago(authors) {
     return `${formattedAuthors[0]}, et al.`;
   }
 }
-
 
 function formatCitationChicago(citation) {
   let authors = formatAuthorsChicago(citation.authors);

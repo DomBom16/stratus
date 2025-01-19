@@ -198,7 +198,11 @@ async function processYoutubeLink(youtubeUrl, conversationId) {
       throw new Error("Invalid YouTube URL");
     }
 
+    console.log(`Processing YouTube video: ${youtubeUrl}`);
+
     const info = await ytdl.getInfo(youtubeUrl);
+    console.log(`Got video info: ${JSON.stringify(info)}`);
+
     let captionsTrack =
       info.player_response.captions?.playerCaptionsTracklistRenderer?.captionTracks?.find(
         (track) => track.languageCode === "en",
@@ -213,6 +217,8 @@ async function processYoutubeLink(youtubeUrl, conversationId) {
         throw new Error("No suitable captions found for the YouTube video");
       }
     }
+
+    console.log(`Using captions track: ${JSON.stringify(captionsTrack)}`);
 
     const captionsResponse = await fetch(captionsTrack.baseUrl);
     if (!captionsResponse.ok) {
@@ -230,10 +236,14 @@ async function processYoutubeLink(youtubeUrl, conversationId) {
       throw new Error("Failed to extract text from the YouTube captions");
     }
 
+    console.log(`Extracted text from captions: ${textContent}`);
+
     const { title, unfocusedSummary, focusedSummary } = await processFile(
       textContent,
       model,
     );
+
+    console.log(`Got file metadata: ${JSON.stringify({ title, unfocusedSummary, focusedSummary })}`);
 
     const fileId = uuidv4();
     const newFile = {
@@ -266,6 +276,8 @@ async function processYoutubeLink(youtubeUrl, conversationId) {
     conversation.files.push(newFile);
     conversation.last_updated = new Date();
     await conversation.save();
+
+    console.log(`Saved new file: ${JSON.stringify(newFile)}`);
 
     return { name: title, id: fileId };
   } catch (error) {
