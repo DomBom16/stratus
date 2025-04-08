@@ -71,20 +71,21 @@ const functionFinishMessages = {
 };
 
 const functionParamNames = {
-  random_number: ["min", "max"],
+  random_number: ["minValue", "maxValue", "count"],
   calculate: ["expression", "latex"],
   google_search: ["query", "numResults"],
 };
 
 const functionMap = {
-  random_number: async function (min = 1, max = 100, n = 1) {
-    if (min >= max) {
+  random_number: async function (minValue = 1, maxValue = 100, count = 1) {
+    if (minValue >= maxValue) {
       throw new Error("Minimum value must be less than maximum value");
     }
-    const numbers = [];
-    for (let i = 0; i < n; i++) {
-      numbers.push(Math.floor(Math.random() * (max - min) + min));
-    }
+
+    const numbers = Array.from({ length: count }, () =>
+      minValue + Math.floor(Math.random() * (maxValue - minValue))
+    );
+
     return numbers;
   },
   calculate: async function (expression) {

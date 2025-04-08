@@ -54,17 +54,19 @@ const apiEndpoints = {
     rename: (id, fileId) => `/api/content/rename/${id}/${fileId}`,
   },
   citations: {
-    surrounding: "/api/citations/surrounding",
+    surrounding: "/api/sources/excerpt",
   },
 };
 
-const apiCache = new Map();
+const apiCacheStorageKey = "api-cache";
 
-async function fetchCached(url, options = {}, ttl = 5 * 60 * 1000) {
+const apiCache = JSON.parse(localStorage.getItem(apiCacheStorageKey) || "{}");
+
+async function fetchCached(url, options = {}, ttl = 10 * 60 * 1000) {
   const cacheKey = url + JSON.stringify(options);
 
   const now = Date.now();
-  const cachedEntry = apiCache.get(cacheKey);
+  const cachedEntry = apiCache[cacheKey];
 
   // Check if the cached entry exists and is still valid
   if (cachedEntry && now - cachedEntry.timestamp < ttl) {
@@ -76,7 +78,10 @@ async function fetchCached(url, options = {}, ttl = 5 * 60 * 1000) {
   const data = await response.json();
 
   // Cache the result with a timestamp
-  apiCache.set(cacheKey, { data, timestamp: now });
+  apiCache[cacheKey] = { data, timestamp: now };
+
+  // Persist the cache to local storage
+  localStorage.setItem(apiCacheStorageKey, JSON.stringify(apiCache));
 
   return data;
 }
@@ -656,11 +661,11 @@ function showVerbatimPopup(sourceElement, snippet, sourceUrl, sourceTitle) {
       blurContainer.style.bottom = "0";
     }
 
-    let currentBlur = 0.25; // pixels
-    let currentHeight = 44; // pixels
+    let currentBlur = 0.1; // pixels,
+    let currentHeight = 48; // pixels
 
     // Create 4 divs with varying blur levels and heights
-    for (let i = 1; i <= 12; i++) {
+    for (let i = 1; i <= 6; i++) {
       const blurLayer = document.createElement("div");
       blurLayer.style.position = "absolute";
       blurLayer.style.left = "0";
@@ -673,14 +678,14 @@ function showVerbatimPopup(sourceElement, snippet, sourceUrl, sourceTitle) {
       blurLayer.style.height = `${currentHeight}px`; // Increase height for less blurry layers
       blurLayer.style.background =
         position === "top"
-          ? `linear-gradient(to bottom, rgba(24, 24, 27, ${0.025 * i}), rgba(24, 24, 27, 0))`
-          : `linear-gradient(to top, rgba(24, 24, 27, ${0.025 * i}), rgba(24, 24, 27, 0))`;
+          ? `linear-gradient(to bottom, rgba(24, 24, 27, ${0.1 * i}), rgba(24, 24, 27, 0))`
+          : `linear-gradient(to top, rgba(24, 24, 27, ${0.1 * i}), rgba(24, 24, 27, 0))`;
       blurLayer.style.backdropFilter = `blur(${currentBlur}px)`; // Increase blur effect with each layer
       blurLayer.style.zIndex = `${5 - i}`; // Ensure layers stack correctly
       blurContainer.appendChild(blurLayer);
 
-      currentBlur *= 1.15;
-      currentHeight /= 1.1;
+      currentBlur *= 1.3;
+      currentHeight /= 1.3;
     }
 
     return blurContainer;
@@ -698,7 +703,7 @@ function showVerbatimPopup(sourceElement, snippet, sourceUrl, sourceTitle) {
     );
 
     const textContent = document.createElement("div");
-    textContent.innerHTML = `<span class="text-zinc-400">${data.leading}</span><a href="${sourceUrl}" target="_blank" class="font-bold text-zinc-100">${data.snippet}</a><span class="text-zinc-400">${data.trailing}</span>`;
+    textContent.innerHTML = `<span class="text-zinc-400">${data.leading}</span> <a href="${sourceUrl}" target="_blank" class="font-bold text-zinc-100">${data.snippet}</a> <span class="text-zinc-400">${data.trailing}</span>`;
 
     contentDiv.appendChild(createBlurLayers("top"));
     contentDiv.appendChild(textContent); // Text content is sandwiched between blur layers

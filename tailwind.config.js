@@ -9,6 +9,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ["Apfel Grotezk", "sans-serif"],
+        // sans: ["Inter Variable", "sans-serif"],
         // sans: ["Open Sauce One", "sans-serif"],
         serif: ["Bricolage Grotesque", "serif"],
         mono: ["JetBrains Mono"],

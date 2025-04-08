@@ -33,24 +33,24 @@ async function processStream(
       type: "function",
       function: {
         name: "random_number",
-        description: "Generates a random number; min=0, max=100",
+        description: "Generates a random number; minValue=0, maxValue=100, count=1",
         parameters: {
           type: "object",
           properties: {
-            min: {
+            minValue: {
               type: "number",
               description: "The minimum value of the range",
             },
-            max: {
+            maxValue: {
               type: "number",
               description: "The maximum value of the range",
             },
-            n: {
+            count: {
               type: "number",
               description: "The number of random numbers to generate",
             },
           },
-          required: ["min", "max", "n"],
+          required: ["minValue", "maxValue", "count"],
         },
       },
     },
